@@ -3,6 +3,8 @@ namespace OCA\AdvancedSearch\Controller;
 
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\IRequest;
 use OCA\AdvancedSearch\Service\SearchService;
 
@@ -14,12 +16,10 @@ class SearchController extends Controller {
         $this->searchService = $searchService;
     }
 
-    /**
-     * @NoAdminRequired
-     */
-    public function search($filename = '', $tags = [], $tagOperator = 'AND') {
+    #[NoAdminRequired]
+    public function search($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '') {
         try {
-            $results = $this->searchService->searchFiles($filename, $tags, $tagOperator);
+            $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType);
             return new JSONResponse(['success' => true, 'files' => $results]);
         } catch (\Exception $e) {
             return new JSONResponse(['success' => false, 'message' => $e->getMessage()]);

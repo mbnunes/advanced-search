@@ -3,6 +3,8 @@ namespace OCA\AdvancedSearch\Controller;
 
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\IRequest;
 use OCP\Util;
 
@@ -12,10 +14,8 @@ class PageController extends Controller {
         parent::__construct($AppName, $request);
     }
 
-    /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function index() {
         // Adicionar scripts e estilos
         Util::addScript('advancedsearch', 'search');
