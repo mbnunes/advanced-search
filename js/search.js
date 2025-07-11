@@ -1,4 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Desabilitar Viewer temporariamente se estiver causando conflitos
+    if (typeof OCA !== 'undefined' && OCA.Viewer) {
+        // Guardar referência antiga
+        window._oldViewer = OCA.Viewer;
+        // Temporariamente desabilitar
+        delete OCA.Viewer;
+    }
+    
     // Elementos principais
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
