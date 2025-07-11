@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mostrar loading
         resultsDiv.innerHTML = '<div class="loading">Buscando...</div>';
         
-        fetch(OC.generateUrl('/apps/advanced-search/api/search'), {
+        // URL corrigida
+        fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

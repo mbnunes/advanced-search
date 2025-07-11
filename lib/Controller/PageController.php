@@ -18,9 +18,9 @@ class PageController extends Controller {
      */
     public function index() {
         // Adicionar scripts e estilos
-        Util::addScript('advanced-search', 'search');
-        Util::addStyle('advanced-search', 'style');
+        Util::addScript('advancedsearch', 'search');
+        Util::addStyle('advancedsearch', 'style');
         
-        return new TemplateResponse('advanced-search', 'index');
+        return new TemplateResponse('advancedsearch', 'index');
     }
 }
