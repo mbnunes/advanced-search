@@ -64,6 +64,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Variável para cache de busca
+    let searchCache = {
+        params: null,
+        results: [],
+        total: 0
+    };
+
     function performSearch(page = 1) {
         const filename = document.getElementById('filename').value;
         const tagsInput = document.getElementById('tags').value;
@@ -78,57 +85,157 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Salvar parâmetros da última busca
-        lastSearchParams = {
+        const currentParams = {
             filename: filename,
             tags: tags,
             tagOperator: tagOperator,
             fileType: fileType
         };
 
+        // Verificar se é a mesma busca (apenas mudou a página)
+        const isSameSearch = JSON.stringify(currentParams) === JSON.stringify(searchCache.params);
+
         currentPage = page;
         const offset = (page - 1) * pageSize;
 
-        // Mostrar loading
-        showLoading();
+        // Se é a mesma busca e já temos o total, não precisamos buscar novamente o total
+        if (isSameSearch && searchCache.total > 0) {
+            // Buscar apenas a página necessária
+            showLoading();
 
-        fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'requesttoken': OC.requestToken
+                },
+                body: JSON.stringify({
+                    ...currentParams,
+                    limit: pageSize,
+                    offset: offset
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        totalResults = searchCache.total;
+                        displayResults(data.files, offset);
+                        updatePagination();
+                    }
+                });
+        } else {
+            // Nova busca - buscar primeira página e estimar total
+            lastSearchParams = currentParams;
+            searchCache.params = currentParams;
+
+            showLoading();
+
+            // Buscar primeira página
+            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'requesttoken': OC.requestToken
+                },
+                body: JSON.stringify({
+                    ...currentParams,
+                    limit: pageSize,
+                    offset: offset
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Se encontrou resultados, estimar o total
+                        if (data.files.length === pageSize) {
+                            // Provavelmente há mais páginas
+                            // Fazer uma busca rápida para contar
+                            return estimateTotal(currentParams).then(total => {
+                                searchCache.total = total;
+                                totalResults = total;
+                                hideLoading();
+                                displayResults(data.files, offset);
+                                updatePagination();
+                            });
+                        } else {
+                            // Menos de uma página, este é o total
+                            searchCache.total = data.files.length;
+                            totalResults = data.files.length;
+                            hideLoading();
+                            displayResults(data.files, offset);
+                            updatePagination();
+                        }
+                    } else {
+                        hideLoading();
+                        showError(data.message || 'Erro desconhecido na busca');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Erro na busca:', error);
+                    showError('Erro de conexão. Tente novamente.');
+                });
+        }
+    }
+
+    // Função para estimar o total de resultados
+    function estimateTotal(params) {
+        // Buscar com limite maior para ter uma estimativa
+        return fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'requesttoken': OC.requestToken
             },
             body: JSON.stringify({
-                filename: filename,
-                tags: tags,
-                tagOperator: tagOperator,
-                fileType: fileType,
-                limit: pageSize,
-                offset: offset
+                ...params,
+                limit: 500, // Limite razoável para contar
+                offset: 0
             })
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                hideLoading();
                 if (data.success) {
-                    // Usar o total retornado pela API
-                    totalResults = data.total;
-                    displayResults(data.files, offset);
-                    updatePagination();
-                } else {
-                    showError(data.message || 'Erro desconhecido na busca');
+                    // Se retornou 500, provavelmente há mais
+                    if (data.files.length === 500) {
+                        return 500; // Mostrar "500+" na interface
+                    }
+                    return data.files.length;
                 }
+                return 0;
             })
-            .catch(error => {
-                hideLoading();
-                console.error('Erro na busca:', error);
-                showError('Erro de conexão. Tente novamente.');
-            });
+            .catch(() => 0);
+    }
+
+    // Limpar cache ao fazer nova busca
+    function clearSearch() {
+        // Limpar cache
+        searchCache = {
+            params: null,
+            results: [],
+            total: 0
+        };
+
+        document.getElementById('filename').value = '';
+        document.getElementById('tags').value = '';
+        document.getElementById('file-type').value = '';
+        const tagAndRadio = document.getElementById('tag-and');
+        if (tagAndRadio) tagAndRadio.checked = true;
+
+        fileList.innerHTML = '';
+        if (resultCount) resultCount.textContent = '';
+
+        showEmptyContent();
+
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        if (emptyTitle) emptyTitle.textContent = 'Faça uma busca';
+        if (emptyText) emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+
+        lastSearchParams = null;
+        currentPage = 1;
+        totalResults = 0;
     }
 
     // Remover ou comentar a função getTotalCount, não é mais necessária
@@ -252,35 +359,6 @@ document.addEventListener('DOMContentLoaded', function () {
         span.style.padding = '6px';
         span.style.color = 'var(--color-text-light)';
         if (pageNumbers) pageNumbers.appendChild(span);
-    }
-
-    function clearSearch() {
-        // Remover o event listener antes de limpar
-        if (fileList) {
-            fileList.removeEventListener('click', handleFileClick);
-        }
-
-        document.getElementById('filename').value = '';
-        document.getElementById('tags').value = '';
-        document.getElementById('file-type').value = '';
-        const tagAndRadio = document.getElementById('tag-and');
-        if (tagAndRadio) tagAndRadio.checked = true;
-
-        fileList.innerHTML = '';
-        if (resultCount) resultCount.textContent = '';
-
-        // Voltar ao estado inicial
-        showEmptyContent();
-
-        // Restaurar texto inicial
-        const emptyTitle = document.querySelector('#emptycontent h2');
-        const emptyText = document.querySelector('#emptycontent p');
-        if (emptyTitle) emptyTitle.textContent = 'Faça uma busca';
-        if (emptyText) emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
-
-        lastSearchParams = null;
-        currentPage = 1;
-        totalResults = 0;
     }
 
     function displayResults(files, offset) {
