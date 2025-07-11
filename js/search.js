@@ -282,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Importante: esconder empty content e mostrar tabela
         hideEmptyContent();
+        fileTable.classList.remove('hidden');
         
         resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
 
@@ -437,11 +438,11 @@ function setupTagAutocomplete() {
 
     // Buscar tags disponíveis
     fetch(OC.generateUrl('/apps/advancedsearch/api/tags'), {
-        method: 'GET',
-        headers: {
-            'requesttoken': OC.requestToken
-        }
-    })
+            method: 'GET',
+            headers: {
+                'requesttoken': OC.requestToken
+            }
+        })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
