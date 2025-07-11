@@ -106,7 +106,7 @@ style('advancedsearch', 'style');
                 </div>
             </div>
             
-            <div id="emptycontent" class="hidden">
+            <div id="emptycontent">
                 <div class="icon-search"></div>
                 <h2><?php p($l->t('No results found')); ?></h2>
                 <p><?php p($l->t('Try adjusting your search criteria')); ?></p>
@@ -117,7 +117,7 @@ style('advancedsearch', 'style');
                 <h2><?php p($l->t('Searching...')); ?></h2>
             </div>
             
-            <table id="filestable" class="list-container">
+            <table id="filestable" class="list-container hidden">
                 <thead>
                     <tr>
                         <th id="headerName" class="column-name">

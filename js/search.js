@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultCount = document.getElementById('result-count');
     const viewListBtn = document.getElementById('view-list');
     const viewGridBtn = document.getElementById('view-grid');
+    const fileTable = document.getElementById('filestable');
 
     // Elementos de paginação
     const pagination = document.getElementById('pagination');
@@ -277,28 +278,42 @@ document.addEventListener('DOMContentLoaded', function () {
 
         fileList.innerHTML = '';
         resultCount.textContent = '';
-        pagination.classList.add('hidden');
+        
+        // Voltar ao estado inicial
+        showEmptyContent();
+        
+        // Restaurar texto inicial
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        
+        emptyTitle.textContent = 'Faça uma busca';
+        emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+        
         lastSearchParams = null;
         currentPage = 1;
         totalResults = 0;
-        showEmptyContent();
     }
 
     function displayResults(files, offset) {
-        hideEmptyContent();
-
         if (files.length === 0 && currentPage === 1) {
             showEmptyContent();
             resultCount.textContent = 'Nenhum resultado encontrado';
-            // Esconder paginação quando não há resultados
-            if (pagination) {
-                pagination.classList.add('hidden');
-            }
             return;
         }
 
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        hideEmptyContent();
 
+        // if (files.length === 0 && currentPage === 1) {
+        //     showEmptyContent();
+        //     resultCount.textContent = 'Nenhum resultado encontrado';
+        //     // Esconder paginação quando não há resultados
+        //     if (pagination) {
+        //         pagination.classList.add('hidden');
+        //     }
+        //     return;
+        // }
+
+        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
         let html = '';
 
         files.forEach((file, index) => {
@@ -400,6 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function showLoading() {
         loading.classList.remove('hidden');
         emptyContent.classList.add('hidden');
+        fileTable.classList.add('hidden'); // Esconder tabela
         fileList.innerHTML = '';
         pagination.classList.add('hidden');
     }
@@ -410,12 +426,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showEmptyContent() {
         emptyContent.classList.remove('hidden');
+        fileTable.classList.add('hidden'); // Esconder tabela
         fileList.innerHTML = '';
         pagination.classList.add('hidden');
     }
 
     function hideEmptyContent() {
         emptyContent.classList.add('hidden');
+        fileTable.classList.remove('hidden'); // Mostrar tabela
     }
 
     function showError(message) {
@@ -440,6 +458,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Inicializar
     showEmptyContent();
+    // Ajustar texto inicial do emptycontent
+    const emptyTitle = document.querySelector('#emptycontent h2');
+    const emptyText = document.querySelector('#emptycontent p');
+    
+    emptyTitle.textContent = 'Faça uma busca';
+    emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+    
     setupTagAutocomplete();
 });
 
