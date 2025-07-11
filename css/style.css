@@ -495,3 +495,22 @@
         margin-top: 10px;
     }
 }
+
+/* Melhorar a experiência de clique nas linhas */
+.file-row {
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.file-row:hover {
+    background: var(--color-background-hover);
+}
+
+.file-row:active {
+    background: var(--color-background-dark);
+}
+
+/* Garantir que toda a linha seja clicável */
+.file-row td {
+    position: relative;
+}

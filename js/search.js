@@ -35,17 +35,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Event listeners - apenas adicionar se o elemento existir
     if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
     if (clearBtn) clearBtn.addEventListener('click', clearSearch);
-    
+
     // View buttons podem não existir em todas as páginas
     if (viewListBtn) viewListBtn.addEventListener('click', () => setView('list'));
     if (viewGridBtn) viewGridBtn.addEventListener('click', () => setView('grid'));
-    
+
     // Event listeners de paginação
     if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
     if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
     if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
     if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(Math.ceil(totalResults / pageSize)));
-    
+
     if (pageSizeSelect) {
         pageSizeSelect.addEventListener('change', (e) => {
             pageSize = parseInt(e.target.value);
@@ -106,30 +106,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: offset
             })
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            hideLoading();
-            if (data.success) {
-                // Para obter o total real, fazer uma busca sem limite
-                getTotalCount(lastSearchParams).then(total => {
-                    totalResults = total;
-                    displayResults(data.files, offset);
-                    updatePagination();
-                });
-            } else {
-                showError(data.message || 'Erro desconhecido na busca');
-            }
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Erro na busca:', error);
-            showError('Erro de conexão. Tente novamente.');
-        });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    // Para obter o total real, fazer uma busca sem limite
+                    getTotalCount(lastSearchParams).then(total => {
+                        totalResults = total;
+                        displayResults(data.files, offset);
+                        updatePagination();
+                    });
+                } else {
+                    showError(data.message || 'Erro desconhecido na busca');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Erro na busca:', error);
+                showError('Erro de conexão. Tente novamente.');
+            });
     }
 
     function getTotalCount(params) {
@@ -145,9 +145,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: 0
             })
         })
-        .then(response => response.json())
-        .then(data => data.success ? data.count : 0)
-        .catch(() => 0);
+            .then(response => response.json())
+            .then(data => data.success ? data.count : 0)
+            .catch(() => 0);
     }
 
     function goToPage(page) {
@@ -159,9 +159,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updatePagination() {
         if (!pagination) return;
-        
+
         const totalPages = Math.ceil(totalResults / pageSize);
-        
+
         // Mostrar/ocultar paginação
         if (totalResults > 0) {
             pagination.classList.remove('hidden');
@@ -186,12 +186,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Gerar números de página
         if (pageNumbers) {
             pageNumbers.innerHTML = '';
-            
+
             // Se só tem uma página, não mostrar números
             if (totalPages === 1) {
                 return;
             }
-            
+
             // Lógica para mostrar páginas com elipses
             let startPage = Math.max(1, currentPage - 2);
             let endPage = Math.min(totalPages, currentPage + 2);
@@ -230,11 +230,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const button = document.createElement('button');
         button.className = 'pagination-button';
         button.textContent = pageNum;
-        
+
         if (pageNum === currentPage) {
             button.classList.add('active');
         }
-        
+
         button.addEventListener('click', () => goToPage(pageNum));
         if (pageNumbers) pageNumbers.appendChild(button);
     }
@@ -249,6 +249,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clearSearch() {
+        // Remover o event listener antes de limpar
+        if (fileList) {
+            fileList.removeEventListener('click', handleFileClick);
+        }
+
         document.getElementById('filename').value = '';
         document.getElementById('tags').value = '';
         document.getElementById('file-type').value = '';
@@ -257,119 +262,116 @@ document.addEventListener('DOMContentLoaded', function () {
 
         fileList.innerHTML = '';
         if (resultCount) resultCount.textContent = '';
-        
+
         // Voltar ao estado inicial
         showEmptyContent();
-        
+
         // Restaurar texto inicial
         const emptyTitle = document.querySelector('#emptycontent h2');
         const emptyText = document.querySelector('#emptycontent p');
         if (emptyTitle) emptyTitle.textContent = 'Faça uma busca';
         if (emptyText) emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
-        
+
         lastSearchParams = null;
         currentPage = 1;
         totalResults = 0;
     }
 
     function displayResults(files, offset) {
-    if (files.length === 0 && currentPage === 1) {
-        showEmptyContent();
-        const emptyTitle = document.querySelector('#emptycontent h2');
-        const emptyText = document.querySelector('#emptycontent p');
-        if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-        if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-        if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
-        return;
-    }
+        if (files.length === 0 && currentPage === 1) {
+            showEmptyContent();
+            const emptyTitle = document.querySelector('#emptycontent h2');
+            const emptyText = document.querySelector('#emptycontent p');
+            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+            return;
+        }
 
-    hideEmptyContent();
-    
-    if (resultCount) {
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-    }
+        hideEmptyContent();
 
-    let html = '';
+        if (resultCount) {
+            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        }
 
-    files.forEach((file, index) => {
-        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-        const fileSize = formatFileSize(file.size);
-        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-        const fileIcon = getFileIcon(file.name);
+        let html = '';
 
-        html += `
-            <tr class="file-row" 
-                data-file-id="${file.id}" 
-                data-file-path="${escapeHtml(file.path)}"
-                data-file-name="${escapeHtml(file.name)}"
-                data-mime-type="${escapeHtml(file.mimetype)}">
-                <td class="filename">
-                    <div style="display: flex; align-items: center;">
-                        <div class="file-icon ${fileIcon}"></div>
-                        <div>
-                            <div class="file-name">${escapeHtml(file.name)}</div>
-                            <div class="file-path">${escapeHtml(file.path)}</div>
+        files.forEach((file, index) => {
+            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            const fileSize = formatFileSize(file.size);
+            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+            const fileIcon = getFileIcon(file.name);
+
+            html += `
+                <tr class="file-row" 
+                    data-file-id="${file.id}" 
+                    data-file-path="${escapeHtml(file.path)}"
+                    data-file-name="${escapeHtml(file.name)}"
+                    data-mime-type="${escapeHtml(file.mimetype || '')}">
+                    <td class="filename">
+                        <div style="display: flex; align-items: center;">
+                            <div class="file-icon ${fileIcon}"></div>
+                            <div>
+                                <div class="file-name">${escapeHtml(file.name)}</div>
+                                <div class="file-path">${escapeHtml(file.path)}</div>
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td class="filesize">
-                    <span class="file-size">${fileSize}</span>
-                </td>
-                <td class="date">
-                    <span class="file-date">${fileDate}</span>
-                </td>
-                <td class="tags">
-                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
-                </td>
-            </tr>
-        `;
-    });
-
-    fileList.innerHTML = html;
-
-    // Adicionar event listeners para as linhas
-    document.querySelectorAll('.file-row').forEach(row => {
-        row.addEventListener('click', function () {
-            const fileId = this.getAttribute('data-file-id');
-            const filePath = this.getAttribute('data-file-path');
-            const fileName = this.getAttribute('data-file-name');
-            const mimeType = this.getAttribute('data-mime-type');
-            
-            openFile(fileId, filePath, fileName, mimeType);
+                    </td>
+                    <td class="filesize">
+                        <span class="file-size">${fileSize}</span>
+                    </td>
+                    <td class="date">
+                        <span class="file-date">${fileDate}</span>
+                    </td>
+                    <td class="tags">
+                        <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                    </td>
+                </tr>
+            `;
         });
-    });
-}
 
-function openFile(fileId, filePath, fileName, mimeType) {
-    console.log('Opening file:', { fileId, filePath, fileName, mimeType });
-    
-    // Verificar se é imagem ou vídeo
-    if (mimeType && (mimeType.startsWith('image/') || mimeType.startsWith('video/'))) {
-        // Tentar abrir no viewer
-        if (typeof OCA !== 'undefined' && OCA.Viewer && OCA.Viewer.open) {
-            // Viewer do Nextcloud disponível
-            OCA.Viewer.open({
-                fileId: parseInt(fileId),
-                path: filePath
-            });
-        } else {
-            // Fallback: abrir com parâmetro openfile
-            window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}&openfile=1', {
+        fileList.innerHTML = html;
+
+        // Adicionar event listeners para as linhas - Usar delegação de eventos
+        fileList.addEventListener('click', handleFileClick);
+    }
+
+    // Função separada para lidar com cliques
+    function handleFileClick(event) {
+        // Encontrar a linha clicada
+        const row = event.target.closest('.file-row');
+        if (!row) return;
+
+        const fileId = row.getAttribute('data-file-id');
+        const filePath = row.getAttribute('data-file-path');
+        const fileName = row.getAttribute('data-file-name');
+        const mimeType = row.getAttribute('data-mime-type');
+
+        openFile(fileId, filePath, fileName, mimeType);
+    }
+
+    function openFile(fileId, filePath, fileName, mimeType) {
+        console.log('Opening file:', { fileId, filePath, fileName, mimeType });
+
+        // Para imagens, vídeos e PDFs, abrir com o viewer
+        if (mimeType && (
+            mimeType.startsWith('image/') ||
+            mimeType.startsWith('video/') ||
+            mimeType === 'application/pdf'
+        )) {
+            // Usar o método padrão do Nextcloud para abrir arquivos
+            const openUrl = OC.generateUrl('/apps/files/?fileid={fileId}#openfile', {
                 fileId: fileId
             });
+            window.location.href = openUrl;
+        } else {
+            // Para outros arquivos, apenas navegar até eles
+            const fileUrl = OC.generateUrl('/apps/files/?fileid={fileId}', {
+                fileId: fileId
+            });
+            window.location.href = fileUrl;
         }
-    } else if (mimeType === 'application/pdf') {
-        // PDFs também podem ser abertos no viewer
-        window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}&openfile=1', {
-            fileId: fileId
-        });
-    } else {
-        // Para outros arquivos, navegar até o arquivo
-        window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}', {
-            fileId: fileId
-        });
     }
-}
 
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
@@ -462,7 +464,7 @@ function openFile(fileId, filePath, fileName, mimeType) {
     showEmptyContent();
     document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
     document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
-    
+
     setupTagAutocomplete();
 });
 
@@ -472,11 +474,11 @@ function setupTagAutocomplete() {
 
     // Buscar tags disponíveis
     fetch(OC.generateUrl('/apps/advancedsearch/api/tags'), {
-            method: 'GET',
-            headers: {
-                'requesttoken': OC.requestToken
-            }
-        })
+        method: 'GET',
+        headers: {
+            'requesttoken': OC.requestToken
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
