@@ -13,7 +13,7 @@
     <navigations>
         <navigation>
             <name>Advanced Search</name>
-            <route>advanced-search.page.index</route>
+            <route>advanced-search.page#index</route>
             <icon>app.svg</icon>
             <order>10</order>
         </navigation>
