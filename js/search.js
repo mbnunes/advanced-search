@@ -144,62 +144,83 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updatePagination() {
-        const totalPages = Math.ceil(totalResults / pageSize);
-        
-        // Mostrar/ocultar paginação
-        if (totalResults > 0) {
-            pagination.classList.remove('hidden');
-        } else {
-            pagination.classList.add('hidden');
-            return;
-        }
+    const totalPages = Math.ceil(totalResults / pageSize);
+    
+    console.log('Atualizando paginação:', {
+        totalResults,
+        totalPages,
+        currentPage,
+        pageSize
+    });
+    
+    // Verificar se o elemento existe
+    if (!pagination) {
+        console.error('Elemento de paginação não encontrado!');
+        return;
+    }
+    
+    // Mostrar/ocultar paginação
+    if (totalResults > pageSize) { // Só mostrar se há mais de uma página
+        pagination.classList.remove('hidden');
+    } else if (totalResults > 0) {
+        // Ainda mostrar info mesmo com uma página
+        pagination.classList.remove('hidden');
+    } else {
+        pagination.classList.add('hidden');
+        return;
+    }
 
-        // Atualizar informação
-        const start = (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalResults);
-        paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+    // Atualizar informação
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalResults);
+    paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
 
-        // Habilitar/desabilitar botões
-        firstPageBtn.disabled = currentPage === 1;
-        prevPageBtn.disabled = currentPage === 1;
-        nextPageBtn.disabled = currentPage === totalPages;
-        lastPageBtn.disabled = currentPage === totalPages;
+    // Habilitar/desabilitar botões
+    firstPageBtn.disabled = currentPage === 1;
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages;
+    lastPageBtn.disabled = currentPage === totalPages;
 
-        // Gerar números de página
-        pageNumbers.innerHTML = '';
-        
-        // Lógica para mostrar páginas com elipses
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
+    // Gerar números de página
+    pageNumbers.innerHTML = '';
+    
+    // Se só tem uma página, não mostrar números
+    if (totalPages === 1) {
+        return;
+    }
+    
+    // Lógica para mostrar páginas com elipses
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
 
-        if (currentPage <= 3) {
-            endPage = Math.min(5, totalPages);
-        }
-        if (currentPage >= totalPages - 2) {
-            startPage = Math.max(1, totalPages - 4);
-        }
+    if (currentPage <= 3) {
+        endPage = Math.min(5, totalPages);
+    }
+    if (currentPage >= totalPages - 2) {
+        startPage = Math.max(1, totalPages - 4);
+    }
 
-        // Primeira página
-        if (startPage > 1) {
-            addPageButton(1);
-            if (startPage > 2) {
-                addEllipsis();
-            }
-        }
-
-        // Páginas do meio
-        for (let i = startPage; i <= endPage; i++) {
-            addPageButton(i);
-        }
-
-        // Última página
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                addEllipsis();
-            }
-            addPageButton(totalPages);
+    // Primeira página
+    if (startPage > 1) {
+        addPageButton(1);
+        if (startPage > 2) {
+            addEllipsis();
         }
     }
+
+    // Páginas do meio
+    for (let i = startPage; i <= endPage; i++) {
+        addPageButton(i);
+    }
+
+    // Última página
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            addEllipsis();
+        }
+        addPageButton(totalPages);
+    }
+}
 
     function addPageButton(pageNum) {
         const button = document.createElement('button');
@@ -239,58 +260,69 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-        hideEmptyContent();
+    hideEmptyContent();
 
-        if (files.length === 0 && currentPage === 1) {
-            showEmptyContent();
-            resultCount.textContent = 'Nenhum resultado encontrado';
-            return;
+    if (files.length === 0 && currentPage === 1) {
+        showEmptyContent();
+        resultCount.textContent = 'Nenhum resultado encontrado';
+        // Esconder paginação quando não há resultados
+        if (pagination) {
+            pagination.classList.add('hidden');
         }
-
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-
-        let html = '';
-
-        files.forEach((file, index) => {
-            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-            const fileSize = formatFileSize(file.size);
-            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-            const fileIcon = getFileIcon(file.name);
-
-            html += `
-                <tr class="file-row" data-file-id="${file.id}">
-                    <td class="filename">
-                        <div style="display: flex; align-items: center;">
-                            <div class="file-icon ${fileIcon}"></div>
-                            <div>
-                                <div class="file-name">${escapeHtml(file.name)}</div>
-                                <div class="file-path">${escapeHtml(file.path)}</div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="filesize">
-                        <span class="file-size">${fileSize}</span>
-                    </td>
-                    <td class="date">
-                        <span class="file-date">${fileDate}</span>
-                    </td>
-                    <td class="tags">
-                        <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
-                    </td>
-                </tr>
-            `;
-        });
-
-        fileList.innerHTML = html;
-
-        // Adicionar event listeners para as linhas
-        document.querySelectorAll('.file-row').forEach(row => {
-            row.addEventListener('click', function () {
-                const fileId = this.getAttribute('data-file-id');
-                openFile(fileId);
-            });
-        });
+        return;
     }
+
+    resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+
+    let html = '';
+
+    files.forEach((file, index) => {
+        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+        const fileSize = formatFileSize(file.size);
+        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+        const fileIcon = getFileIcon(file.name);
+
+        html += `
+            <tr class="file-row" data-file-id="${file.id}">
+                <td class="filename">
+                    <div style="display: flex; align-items: center;">
+                        <div class="file-icon ${fileIcon}"></div>
+                        <div>
+                            <div class="file-name">${escapeHtml(file.name)}</div>
+                            <div class="file-path">${escapeHtml(file.path)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="filesize">
+                    <span class="file-size">${fileSize}</span>
+                </td>
+                <td class="date">
+                    <span class="file-date">${fileDate}</span>
+                </td>
+                <td class="tags">
+                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                </td>
+            </tr>
+        `;
+    });
+
+    fileList.innerHTML = html;
+
+    // Forçar exibição da paginação
+    if (pagination && totalResults > 0) {
+        console.log('Mostrando paginação - Total de resultados:', totalResults);
+        pagination.classList.remove('hidden');
+    }
+
+    // Adicionar event listeners para as linhas
+    document.querySelectorAll('.file-row').forEach(row => {
+        row.addEventListener('click', function () {
+            const fileId = this.getAttribute('data-file-id');
+            openFile(fileId);
+        });
+    });
+}
+
 
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();

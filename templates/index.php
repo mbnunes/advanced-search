@@ -78,83 +78,42 @@ style('advancedsearch', 'style');
         </div>
 
         <div id="app-content-wrapper">
-            <div id="emptycontent" class="hidden">
-                <div class="icon-search"></div>
-                <h2><?php p($l->t('No results found')); ?></h2>
-                <p><?php p($l->t('Try adjusting your search criteria')); ?></p>
-            </div>
-
-            <div id="loading" class="hidden">
-                <div class="icon-loading"></div>
-                <h2><?php p($l->t('Searching...')); ?></h2>
-            </div>
-
-            <div class="table-container">
-                <div class="table-wrapper">
-                    <table id="filestable" class="list-container">
-                        <thead>
-                            <tr>
-                                <th id="headerName" class="column-name">
-                                    <div id="headerName-content">
-                                        <span class="sort-indicator icon-triangle-s"></span>
-                                        <span><?php p($l->t('Name')); ?></span>
-                                    </div>
-                                </th>
-                                <th id="headerSize" class="column-size">
-                                    <span><?php p($l->t('Size')); ?></span>
-                                </th>
-                                <th id="headerDate" class="column-mtime">
-                                    <span><?php p($l->t('Modified')); ?></span>
-                                </th>
-                                <th id="headerTags" class="column-tags">
-                                    <span><?php p($l->t('Tags')); ?></span>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody id="fileList">
-                            <!-- Resultados serão inseridos aqui -->
-                        </tbody>
-                    </table>
+    <!-- Empty content e loading... -->
+    
+    <table id="filestable" class="list-container">
+        <!-- Tabela... -->
+    </table>
+    
+    <!-- Paginação FORA da tabela -->
+    <div class="pagination-wrapper hidden" id="pagination">
+        <div class="pagination-info">
+            <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
+        </div>
+        
+        <div class="pagination-controls">
+            <div class="pagination-buttons">
+                <button class="pagination-button" id="first-page">«</button>
+                <button class="pagination-button" id="prev-page">‹</button>
+                
+                <div id="page-numbers" class="pagination-buttons">
+                    <!-- Números das páginas -->
                 </div>
-
-                <div class="pagination-wrapper hidden" id="pagination">
-                    <div class="pagination-info">
-                        <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
-                    </div>
-
-                    <div class="pagination-controls">
-                        <div class="pagination-buttons">
-                            <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">
-                                <span class="icon-first"></span>
-                            </button>
-                            <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">
-                                <span class="icon-previous"></span>
-                            </button>
-
-                            <div id="page-numbers" class="pagination-buttons">
-                                <!-- Números das páginas serão inseridos aqui -->
-                            </div>
-
-                            <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">
-                                <span class="icon-next"></span>
-                            </button>
-                            <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">
-                                <span class="icon-last"></span>
-                            </button>
-                        </div>
-
-                        <div class="page-size-selector">
-                            <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
-                            <select id="page-size">
-                                <option value="10">10</option>
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                
+                <button class="pagination-button" id="next-page">›</button>
+                <button class="pagination-button" id="last-page">»</button>
+            </div>
+            
+            <div class="page-size-selector">
+                <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
+                <select id="page-size">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
             </div>
         </div>
+    </div>
+</div>
     </div>
 </div>
