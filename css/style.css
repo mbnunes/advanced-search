@@ -576,7 +576,7 @@
 
     .tag {
         background: green;
-        color: var(--color-text-dark);
+        color: white;
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 11px;
@@ -691,7 +691,6 @@
 .view-button span.icon-list,
 .view-button span.icon-toggle-pictures {
     margin-right: 5px;
-    color: gray;
 }
 
 .button-text {
@@ -771,7 +770,7 @@
 
 .tag {
     background: green;
-    color: var(--color-text-dark);
+    color: white;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 11px;
