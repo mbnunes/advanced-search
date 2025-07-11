@@ -279,59 +279,65 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-        if (files.length === 0 && currentPage === 1) {
-            showEmptyContent();
-            const emptyTitle = document.querySelector('#emptycontent h2');
-            const emptyText = document.querySelector('#emptycontent p');
-            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
-            return;
-        }
+    if (files.length === 0 && currentPage === 1) {
+        showEmptyContent();
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+        if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+        if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+        return;
+    }
 
-        hideEmptyContent();
+    hideEmptyContent();
+    
+    if (resultCount) {
+        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+    }
 
-        if (resultCount) {
-            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-        }
+    let html = '';
 
-        let html = '';
+    files.forEach((file, index) => {
+        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+        const fileSize = formatFileSize(file.size);
+        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+        const fileIcon = getFileIcon(file.name);
 
-        files.forEach((file, index) => {
-            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-            const fileSize = formatFileSize(file.size);
-            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-            const fileIcon = getFileIcon(file.name);
-
-            // Fazer o path clicável diretamente
-            const clickHandler = `onclick="window.advancedSearchOpenFile('${file.id}', '${escapeHtml(file.path)}', '${escapeHtml(file.name)}', '${escapeHtml(file.mimetype || '')}')"`;
-
-            html += `
-            <tr class="file-row" ${clickHandler} style="cursor: pointer;">
+        html += `
+            <tr class="file-row">
                 <td class="filename">
-                    <div style="display: flex; align-items: center;">
-                        <div class="file-icon ${fileIcon}"></div>
-                        <div>
-                            <div class="file-name">${escapeHtml(file.name)}</div>
-                            <div class="file-path">${escapeHtml(file.path)}</div>
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <div style="display: flex; align-items: center;">
+                            <div class="file-icon ${fileIcon}"></div>
+                            <div>
+                                <div class="file-name">${escapeHtml(file.name)}</div>
+                                <div class="file-path">${escapeHtml(file.path)}</div>
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </td>
                 <td class="filesize">
-                    <span class="file-size">${fileSize}</span>
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <span class="file-size">${fileSize}</span>
+                    </a>
                 </td>
                 <td class="date">
-                    <span class="file-date">${fileDate}</span>
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <span class="file-date">${fileDate}</span>
+                    </a>
                 </td>
                 <td class="tags">
                     <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
                 </td>
             </tr>
         `;
-        });
+    });
 
-        fileList.innerHTML = html;
-    }
+    fileList.innerHTML = html;
+}
 
     // Função global para abrir arquivos
     window.advancedSearchOpenFile = function (fileId, filePath, fileName, mimeType) {
