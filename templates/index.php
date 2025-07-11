@@ -1,7 +1,6 @@
 <?php
 script('advancedsearch', 'search');
 style('advancedsearch', 'style');
-
 ?>
 
 <div id="app">

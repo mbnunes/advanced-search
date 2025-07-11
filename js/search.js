@@ -85,56 +85,98 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        const currentParams = {
+            filename: filename,
+            tags: tags,
+            tagOperator: tagOperator,
+            fileType: fileType
+        };
+
+        // Verificar se é a mesma busca (apenas mudou a página)
+        const isSameSearch = JSON.stringify(currentParams) === JSON.stringify(searchCache.params);
+
         currentPage = page;
         const offset = (page - 1) * pageSize;
 
-        // Mostrar loading
-        showLoading();
+        // Se é a mesma busca e já temos o total, não precisamos buscar novamente o total
+        if (isSameSearch && searchCache.total > 0) {
+            // Buscar apenas a página necessária
+            showLoading();
 
-        fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'requesttoken': OC.requestToken
-            },
-            body: JSON.stringify({
-                filename: filename,
-                tags: tags,
-                tagOperator: tagOperator,
-                fileType: fileType,
-                limit: pageSize,
-                offset: offset
+            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'requesttoken': OC.requestToken
+                },
+                body: JSON.stringify({
+                    ...currentParams,
+                    limit: pageSize,
+                    offset: offset
+                })
             })
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    const files = data.files || [];
-                    // Usar comprimento dos resultados como estimativa do total
-                    // Para simplicidade, mostramos apenas "muitos resultados" se há uma página completa
-                    if (files.length === pageSize) {
-                        totalResults = (page * pageSize) + pageSize; // Estimar que há pelo menos mais uma página
-                    } else {
-                        totalResults = ((page - 1) * pageSize) + files.length;
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        totalResults = searchCache.total;
+                        displayResults(data.files, offset);
+                        updatePagination();
                     }
+                });
+        } else {
+            // Nova busca - buscar primeira página e estimar total
+            lastSearchParams = currentParams;
+            searchCache.params = currentParams;
 
-                    displayResults(files, offset);
-                    updatePagination();
-                } else {
-                    showError(data.message || 'Erro desconhecido na busca');
-                }
+            showLoading();
+
+            // Buscar primeira página
+            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'requesttoken': OC.requestToken
+                },
+                body: JSON.stringify({
+                    ...currentParams,
+                    limit: pageSize,
+                    offset: offset
+                })
             })
-            .catch(error => {
-                hideLoading();
-                console.error('Erro na busca:', error);
-                showError('Erro de conexão. Tente novamente.');
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Se encontrou resultados, estimar o total
+                        if (data.files.length === pageSize) {
+                            // Provavelmente há mais páginas
+                            // Fazer uma busca rápida para contar
+                            return estimateTotal(currentParams).then(total => {
+                                searchCache.total = total;
+                                totalResults = total;
+                                hideLoading();
+                                displayResults(data.files, offset);
+                                updatePagination();
+                            });
+                        } else {
+                            // Menos de uma página, este é o total
+                            searchCache.total = data.files.length;
+                            totalResults = data.files.length;
+                            hideLoading();
+                            displayResults(data.files, offset);
+                            updatePagination();
+                        }
+                    } else {
+                        hideLoading();
+                        showError(data.message || 'Erro desconhecido na busca');
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Erro na busca:', error);
+                    showError('Erro de conexão. Tente novamente.');
+                });
+        }
     }
 
     // Função para estimar o total de resultados
