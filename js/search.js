@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    let currentView = 'list';
+    let currentView = 'grid';
     let currentPage = 1;
     let totalResults = 0;
     let pageSize = 25;
