@@ -131,39 +131,38 @@ class SearchService {
         return $files;
     }
 
+    // MÉTODO CORRIGIDO PARA NEXTCLOUD 31
     private function getFileIdsByTags($tags, $operator) {
         $fileIds = [];
         
         try {
-            if ($operator === 'AND') {
-                // Para AND, começar com arquivos da primeira tag
-                $firstTag = array_shift($tags);
-                $tagId = $this->getTagIdByName($firstTag);
-                
+            // Coletar IDs das tags
+            $tagIds = [];
+            foreach ($tags as $tagName) {
+                $tagId = $this->getTagIdByName($tagName);
                 if ($tagId) {
-                    $fileIds = $this->systemTagObjectMapper->getObjectsForTag($tagId, 'files');
-                    
-                    // Interseção com outras tags
-                    foreach ($tags as $tagName) {
-                        $tagId = $this->getTagIdByName($tagName);
-                        if ($tagId) {
-                            $otherFileIds = $this->systemTagObjectMapper->getObjectsForTag($tagId, 'files');
-                            $fileIds = array_intersect($fileIds, $otherFileIds);
-                        } else {
-                            return []; // Tag não encontrada
-                        }
-                    }
+                    $tagIds[] = $tagId;
+                } else if ($operator === 'AND') {
+                    // Se operador é AND e uma tag não existe, retornar vazio
+                    return [];
                 }
+            }
+            
+            if (empty($tagIds)) {
+                return [];
+            }
+            
+            if ($operator === 'AND') {
+                // Para AND, usar getObjectIdsForTags que retorna apenas objetos com TODAS as tags
+                $fileIds = $this->systemTagObjectMapper->getObjectIdsForTags($tagIds, 'files');
             } else { // OR
-                // Para OR, união de todas as tags
-                foreach ($tags as $tagName) {
-                    $tagId = $this->getTagIdByName($tagName);
-                    if ($tagId) {
-                        $tagFileIds = $this->systemTagObjectMapper->getObjectsForTag($tagId, 'files');
-                        $fileIds = array_merge($fileIds, $tagFileIds);
-                    }
+                // Para OR, buscar objetos para cada tag e fazer união
+                $allFileIds = [];
+                foreach ($tagIds as $tagId) {
+                    $tagFileIds = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
+                    $allFileIds = array_merge($allFileIds, $tagFileIds);
                 }
-                $fileIds = array_unique($fileIds);
+                $fileIds = array_unique($allFileIds);
             }
         } catch (\Exception $e) {
             return [];
@@ -266,21 +265,23 @@ class SearchService {
         ];
     }
 
+    // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagsByIds
     private function getFileTags($fileId) {
         try {
-            $tags = $this->systemTagObjectMapper->getTagsForObject($fileId, 'files');
-            $result = [];
+            $tagIds = $this->systemTagObjectMapper->getTagIdsForObjects([$fileId], 'files');
             
-            if (empty($tags)) {
-                return $result;
+            if (empty($tagIds) || !isset($tagIds[$fileId])) {
+                return [];
             }
             
-            $tagData = $this->systemTagManager->getTagsById($tags);
-            foreach ($tagData as $tagInfo) {
+            $result = [];
+            $tags = $this->systemTagManager->getTagsByIds($tagIds[$fileId]);
+            
+            foreach ($tags as $tag) {
                 $result[] = [
-                    'id' => $tagInfo->getId(),
-                    'name' => $tagInfo->getName(),
-                    'color' => $tagInfo->isUserAssignable() ? 'blue' : 'red'
+                    'id' => $tag->getId(),
+                    'name' => $tag->getName(),
+                    'color' => $tag->isUserAssignable() ? 'blue' : 'red'
                 ];
             }
             
