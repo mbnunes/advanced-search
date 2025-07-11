@@ -301,20 +301,28 @@ document.addEventListener('DOMContentLoaded', function () {
             resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
         }
 
-        let html = '';
-
         // Verificar se files é um array, caso contrário, converter
         const filesArray = Array.isArray(files) ? files : (
             typeof files === 'object' && files !== null ? Object.values(files) : []
         );
 
-        // Adicionar log para debug
-        console.log('Tipo de files:', typeof files);
-        console.log('Files é um array?', Array.isArray(files));
-        console.log('Conteúdo de files:', files);
+        // Limpar a área de resultados
+        fileList.innerHTML = '';
 
-        filesArray.forEach((file, index) => {
-            // Resto do código permanece igual
+        // Verificar qual visualização usar
+        if (currentView === 'list') {
+            // Visualização em lista (tabela)
+            displayListView(filesArray);
+        } else {
+            // Visualização em grid
+            displayGridView(filesArray);
+        }
+    }
+
+    function displayListView(files) {
+        let html = '';
+
+        files.forEach((file) => {
             const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
             const fileSize = formatFileSize(file.size);
             const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
@@ -354,6 +362,179 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         fileList.innerHTML = html;
+
+        // Certifique-se de que o elemento fileTable tem a classe correta
+        if (fileTable) {
+            fileTable.classList.add('list-view');
+            fileTable.classList.remove('grid-view');
+        }
+    }
+
+    function displayGridView(files) {
+        // Criar um container para o grid
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'grid-container';
+        gridContainer.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        padding: 16px;
+        width: 100%;
+    `;
+
+        // Adicionar cada arquivo ao grid
+        files.forEach(file => {
+            const isImage = file.mimetype && file.mimetype.startsWith('image/');
+            const isVideo = file.mimetype && file.mimetype.startsWith('video/');
+            const hasThumbnail = isImage || isVideo;
+
+            const fileCard = document.createElement('div');
+            fileCard.className = 'file-card';
+            fileCard.style.cssText = `
+            background: var(--color-background-hover);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        `;
+
+            // Adicionar hover effect
+            fileCard.onmouseover = () => {
+                fileCard.style.transform = 'translateY(-2px)';
+                fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            };
+
+            fileCard.onmouseout = () => {
+                fileCard.style.transform = 'translateY(0)';
+                fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            };
+
+            // Adicionar event listener para clicar no card
+            fileCard.addEventListener('click', () => {
+                const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                window.location.href = fileUrl;
+            });
+
+            // Área de thumbnail/ícone
+            const thumbnailArea = document.createElement('div');
+            thumbnailArea.className = 'thumbnail-area';
+            thumbnailArea.style.cssText = `
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-background-dark);
+            position: relative;
+        `;
+
+            // Adicionar thumbnail ou ícone
+            if (hasThumbnail) {
+                // Para imagens e vídeos, tentar carregar thumbnail
+                const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
+                thumbnailArea.style.backgroundImage = `url('${thumbnailUrl}')`;
+                thumbnailArea.style.backgroundSize = 'cover';
+                thumbnailArea.style.backgroundPosition = 'center';
+            } else {
+                // Para outros tipos de arquivo, usar ícone
+                const fileIcon = document.createElement('div');
+                fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                fileIcon.style.fontSize = '48px';
+                thumbnailArea.appendChild(fileIcon);
+            }
+
+            // Área de informações do arquivo
+            const infoArea = document.createElement('div');
+            infoArea.className = 'info-area';
+            infoArea.style.cssText = `
+            padding: 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        `;
+
+            // Nome do arquivo
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            fileName.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 8px;
+            word-break: break-word;
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        `;
+
+            // Data de modificação
+            const fileDate = document.createElement('div');
+            fileDate.className = 'file-date';
+            fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
+            fileDate.style.cssText = `
+            font-size: 12px;
+            color: var(--color-text-lighter);
+            margin-bottom: 8px;
+        `;
+
+            // Tags
+            const fileTags = document.createElement('div');
+            fileTags.className = 'file-tags';
+            fileTags.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: auto;
+        `;
+
+            if (file.tags && file.tags.length > 0) {
+                file.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'tag';
+                    tagElement.textContent = tag.name;
+                    tagElement.style.cssText = `
+                    background: var(--color-primary-element-light);
+                    color: var(--color-primary-text);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                `;
+                    fileTags.appendChild(tagElement);
+                });
+            } else {
+                const noTags = document.createElement('span');
+                noTags.textContent = 'Nenhuma tag';
+                noTags.style.cssText = `
+                font-size: 11px;
+                color: var(--color-text-lighter);
+            `;
+                fileTags.appendChild(noTags);
+            }
+
+            // Adicionar elementos à estrutura
+            infoArea.appendChild(fileName);
+            infoArea.appendChild(fileDate);
+            infoArea.appendChild(fileTags);
+
+            fileCard.appendChild(thumbnailArea);
+            fileCard.appendChild(infoArea);
+
+            gridContainer.appendChild(fileCard);
+        });
+
+        // Limpar fileList e adicionar o grid
+        fileList.innerHTML = '';
+        fileList.appendChild(gridContainer);
+
+        // Atualizar classes do fileTable
+        if (fileTable) {
+            fileTable.classList.remove('list-view');
+            fileTable.classList.add('grid-view');
+        }
     }
 
     // Função global para abrir arquivos
@@ -434,15 +615,256 @@ document.addEventListener('DOMContentLoaded', function () {
         // window.location.href = OC.generateUrl('/apps/files/?fileid=' + fileId);
     }
 
-    function setView(view) {
-        currentView = view;
+    function displayResults(files, offset) {
+        if (!files || files.length === 0 && currentPage === 1) {
+            showEmptyContent();
+            const emptyTitle = document.querySelector('#emptycontent h2');
+            const emptyText = document.querySelector('#emptycontent p');
+            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+            return;
+        }
 
-        if (view === 'list' && viewListBtn && viewGridBtn) {
-            viewListBtn.classList.add('active');
-            viewGridBtn.classList.remove('active');
-        } else if (view === 'grid' && viewListBtn && viewGridBtn) {
-            viewGridBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
+        hideEmptyContent();
+
+        if (resultCount) {
+            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        }
+
+        // Verificar se files é um array, caso contrário, converter
+        const filesArray = Array.isArray(files) ? files : (
+            typeof files === 'object' && files !== null ? Object.values(files) : []
+        );
+
+        // Limpar a área de resultados
+        fileList.innerHTML = '';
+
+        // Verificar qual visualização usar
+        if (currentView === 'list') {
+            // Visualização em lista (tabela)
+            displayListView(filesArray);
+        } else {
+            // Visualização em grid
+            displayGridView(filesArray);
+        }
+    }
+
+    function displayListView(files) {
+        let html = '';
+
+        files.forEach((file) => {
+            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            const fileSize = formatFileSize(file.size);
+            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+            const fileIcon = getFileIcon(file.name);
+
+            html += `
+            <tr class="file-row">
+                <td class="filename">
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <div style="display: flex; align-items: center;">
+                            <div class="file-icon ${fileIcon}"></div>
+                            <div>
+                                <div class="file-name">${escapeHtml(file.name)}</div>
+                                <div class="file-path">${escapeHtml(file.path)}</div>
+                            </div>
+                        </div>
+                    </a>
+                </td>
+                <td class="filesize">
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <span class="file-size">${fileSize}</span>
+                    </a>
+                </td>
+                <td class="date">
+                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
+                       style="text-decoration: none; color: inherit; display: block;">
+                        <span class="file-date">${fileDate}</span>
+                    </a>
+                </td>
+                <td class="tags">
+                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                </td>
+            </tr>
+        `;
+        });
+
+        fileList.innerHTML = html;
+
+        // Certifique-se de que o elemento fileTable tem a classe correta
+        if (fileTable) {
+            fileTable.classList.add('list-view');
+            fileTable.classList.remove('grid-view');
+        }
+    }
+
+    function displayGridView(files) {
+        // Criar um container para o grid
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'grid-container';
+        gridContainer.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        padding: 16px;
+        width: 100%;
+    `;
+
+        // Adicionar cada arquivo ao grid
+        files.forEach(file => {
+            const isImage = file.mimetype && file.mimetype.startsWith('image/');
+            const isVideo = file.mimetype && file.mimetype.startsWith('video/');
+            const hasThumbnail = isImage || isVideo;
+
+            const fileCard = document.createElement('div');
+            fileCard.className = 'file-card';
+            fileCard.style.cssText = `
+            background: var(--color-background-hover);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        `;
+
+            // Adicionar hover effect
+            fileCard.onmouseover = () => {
+                fileCard.style.transform = 'translateY(-2px)';
+                fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            };
+
+            fileCard.onmouseout = () => {
+                fileCard.style.transform = 'translateY(0)';
+                fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            };
+
+            // Adicionar event listener para clicar no card
+            fileCard.addEventListener('click', () => {
+                const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                window.location.href = fileUrl;
+            });
+
+            // Área de thumbnail/ícone
+            const thumbnailArea = document.createElement('div');
+            thumbnailArea.className = 'thumbnail-area';
+            thumbnailArea.style.cssText = `
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-background-dark);
+            position: relative;
+        `;
+
+            // Adicionar thumbnail ou ícone
+            if (hasThumbnail) {
+                // Para imagens e vídeos, tentar carregar thumbnail
+                const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
+                thumbnailArea.style.backgroundImage = `url('${thumbnailUrl}')`;
+                thumbnailArea.style.backgroundSize = 'cover';
+                thumbnailArea.style.backgroundPosition = 'center';
+            } else {
+                // Para outros tipos de arquivo, usar ícone
+                const fileIcon = document.createElement('div');
+                fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                fileIcon.style.fontSize = '48px';
+                thumbnailArea.appendChild(fileIcon);
+            }
+
+            // Área de informações do arquivo
+            const infoArea = document.createElement('div');
+            infoArea.className = 'info-area';
+            infoArea.style.cssText = `
+            padding: 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        `;
+
+            // Nome do arquivo
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            fileName.style.cssText = `
+            font-weight: bold;
+            margin-bottom: 8px;
+            word-break: break-word;
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        `;
+
+            // Data de modificação
+            const fileDate = document.createElement('div');
+            fileDate.className = 'file-date';
+            fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
+            fileDate.style.cssText = `
+            font-size: 12px;
+            color: var(--color-text-lighter);
+            margin-bottom: 8px;
+        `;
+
+            // Tags
+            const fileTags = document.createElement('div');
+            fileTags.className = 'file-tags';
+            fileTags.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: auto;
+        `;
+
+            if (file.tags && file.tags.length > 0) {
+                file.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'tag';
+                    tagElement.textContent = tag.name;
+                    tagElement.style.cssText = `
+                    background: var(--color-primary-element-light);
+                    color: var(--color-primary-text);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                `;
+                    fileTags.appendChild(tagElement);
+                });
+            } else {
+                const noTags = document.createElement('span');
+                noTags.textContent = 'Nenhuma tag';
+                noTags.style.cssText = `
+                font-size: 11px;
+                color: var(--color-text-lighter);
+            `;
+                fileTags.appendChild(noTags);
+            }
+
+            // Adicionar elementos à estrutura
+            infoArea.appendChild(fileName);
+            infoArea.appendChild(fileDate);
+            infoArea.appendChild(fileTags);
+
+            fileCard.appendChild(thumbnailArea);
+            fileCard.appendChild(infoArea);
+
+            gridContainer.appendChild(fileCard);
+        });
+
+        // Limpar fileList e adicionar o grid
+        fileList.innerHTML = '';
+        fileList.appendChild(gridContainer);
+
+        // Atualizar classes do fileTable
+        if (fileTable) {
+            fileTable.classList.remove('list-view');
+            fileTable.classList.add('grid-view');
         }
     }
 

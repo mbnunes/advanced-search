@@ -74,6 +74,20 @@ style('advancedsearch', 'style');
                     </div>
                 </div>
                 
+                <!-- Botões de alternância de visualização -->
+                <div class="view-controls">
+                    <div class="view-buttons">
+                        <button id="view-list" class="view-button active" title="<?php p($l->t('List view')); ?>">
+                            <span class="icon-list"></span>
+                            <span class="button-text"><?php p($l->t('List')); ?></span>
+                        </button>
+                        <button id="view-grid" class="view-button" title="<?php p($l->t('Grid view')); ?>">
+                            <span class="icon-toggle-pictures"></span>
+                            <span class="button-text"><?php p($l->t('Grid')); ?></span>
+                        </button>
+                    </div>
+                </div>
+                
                 <!-- Paginação adicionada aqui -->
                 <div class="pagination-wrapper hidden" id="pagination">
                     <div class="pagination-info">
