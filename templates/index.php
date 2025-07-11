@@ -62,21 +62,6 @@ style('advancedsearch', 'style');
 
     <div id="app-content">
         <div id="app-content-wrapper">
-            <div class="files-controls">
-                <div class="breadcrumb">
-                    <div class="crumb svg canDrop">
-                        <a href="#" class="icon-home"></a>
-                        <span><?php p($l->t('Search Results')); ?></span>
-                    </div>
-                </div>
-
-                <div class="view-controls">
-                    <div class="view-switch">
-                        <button id="view-list" class="icon-view-list active" title="<?php p($l->t('List view')); ?>"></button>
-                        <button id="view-grid" class="icon-view-grid" title="<?php p($l->t('Grid view')); ?>"></button>
-                    </div>
-                </div>
-            </div>
 
             <div id="emptycontent" class="hidden">
                 <div class="icon-search"></div>
