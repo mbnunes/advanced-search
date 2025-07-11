@@ -8,17 +8,25 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\IRequest;
 use OCA\AdvancedSearch\Service\SearchService;
 use OCP\SystemTag\ISystemTagManager;
+use OCP\IDBConnection;
 
 class SearchController extends Controller
 {
-    private $searchService;
+     private $searchService;
     private $systemTagManager;
+    private $db;
 
-    public function __construct($AppName, IRequest $request, SearchService $searchService, ISystemTagManager $systemTagManager)
-    {
+    public function __construct(
+        $AppName, 
+        IRequest $request, 
+        SearchService $searchService, 
+        ISystemTagManager $systemTagManager,
+        IDBConnection $db
+    ) {
         parent::__construct($AppName, $request);
         $this->searchService = $searchService;
         $this->systemTagManager = $systemTagManager;
+        $this->db = $db;
     }
 
     #[NoAdminRequired]

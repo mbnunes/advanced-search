@@ -7,148 +7,236 @@ use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
+use OCP\IDBConnection;
 
 class SearchService {
-    private $rootFolder;
+     private $rootFolder;
     private $userSession;
     private $systemTagManager;
     private $systemTagObjectMapper;
+    private $db;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
-        ISystemTagObjectMapper $systemTagObjectMapper
+        ISystemTagObjectMapper $systemTagObjectMapper,
+        IDBConnection $db
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
+        $this->db = $db;
     }
+
 
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
-    $user = $this->userSession->getUser();
-    if (!$user) {
-        throw new \Exception('User not logged in');
-    }
+        $user = $this->userSession->getUser();
+        if (!$user) {
+            throw new \Exception('User not logged in');
+        }
 
-    $userFolder = $this->rootFolder->getUserFolder($user->getUID());
-    $results = [];
-    $totalCount = 0;
-    
-    // Se tem busca por nome, usar a API de busca otimizada
-    if (!empty($filename)) {
-        // Usar limite maior para contar o total
-        $searchResults = $userFolder->search($filename);
-        $totalCount = count($searchResults);
+        $userId = $user->getUID();
+        $userFolder = $this->rootFolder->getUserFolder($userId);
+        $results = [];
         
-        // Aplicar filtros antes da paginação
-        $filteredResults = [];
-        foreach ($searchResults as $file) {
-            // Verificar se é arquivo (não pasta)
-            if ($file->getType() !== FileInfo::TYPE_FILE) {
-                continue;
-            }
-            
-            // Filtrar por tipo de arquivo
-            if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
-                continue;
-            }
-            
-            // Filtrar por tags
-            if (!empty($tags) && !$this->fileMatchesTags($file->getId(), $tags, $tagOperator)) {
-                continue;
-            }
-            
-            $filteredResults[] = $file;
+        // Buscar por arquivo
+        if (!empty($filename)) {
+            // Usar busca SQL direta para performance máxima
+            $fileIds = $this->searchFilesByNameSQL($userId, $filename, $limit, $offset);
+        } else if (!empty($tags)) {
+            // Buscar por tags
+            $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
+        } else if (!empty($fileType)) {
+            // Buscar por tipo
+            $fileIds = $this->searchFilesByTypeSQL($userId, $fileType, $limit, $offset);
+        } else {
+            // Buscar arquivos recentes - máxima performance
+            $fileIds = $this->getRecentFilesSQL($userId, $limit, $offset);
         }
         
-        $totalCount = count($filteredResults);
-        
-        // Aplicar paginação
-        $paginatedResults = array_slice($filteredResults, $offset, $limit);
-        
-    } else {
-        // Se não tem nome, buscar por outros critérios
-        $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
-        $totalCount = count($searchResults);
-        $paginatedResults = array_slice($searchResults, $offset, $limit);
-    }
-    
-    // Formatar resultados
-    foreach ($paginatedResults as $file) {
-        $results[] = $this->formatFileResult($file);
-    }
-
-    return [
-        'files' => $results,
-        'total' => $totalCount
-    ];
-}
-
-    private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator) {
-        // Se só temos busca por tags, usar método específico
-        if (!empty($tags) && empty($fileType)) {
-            return $this->searchByTagsOnly($userFolder, $tags, $tagOperator);
-        }
-        
-        // Se só temos busca por tipo de arquivo, buscar por extensão comum
-        if (!empty($fileType) && empty($tags)) {
-            return $this->searchByFileTypeOnly($userFolder, $fileType);
-        }
-        
-        // Busca geral - pegar arquivos recentes como fallback
-        try {
-            return $userFolder->getRecent(1000);
-        } catch (\Exception $e) {
-            // Se getRecent não funcionar, retornar array vazio
-            return [];
-        }
-    }
-
-    private function searchByTagsOnly($userFolder, $tags, $tagOperator) {
-        $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
-        $files = [];
-        
+        // Converter IDs em arquivos
         foreach ($fileIds as $fileId) {
             try {
-                $fileNodes = $userFolder->getById($fileId);
-                if (!empty($fileNodes)) {
-                    $files[] = $fileNodes[0];
-                }
-            } catch (\Exception $e) {
-                // Arquivo não encontrado ou sem permissão
-                continue;
-            }
-        }
-        
-        return $files;
-    }
-
-    private function searchByFileTypeOnly($userFolder, $fileType) {
-        $extensions = $this->getExtensionsForFileType($fileType);
-        $files = [];
-        
-        foreach ($extensions as $extension) {
-            try {
-                // Buscar com ponto antes da extensão
-                $searchResults = $userFolder->search('.' . $extension);
-                foreach ($searchResults as $result) {
-                    // Verificar se realmente termina com a extensão
-                    if (strtolower(pathinfo($result->getName(), PATHINFO_EXTENSION)) === $extension) {
-                        $files[] = $result;
+                $nodes = $userFolder->getById($fileId);
+                if (!empty($nodes)) {
+                    $file = $nodes[0];
+                    
+                    // Filtrar por tipo se necessário
+                    if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
+                        continue;
                     }
+                    
+                    // Filtrar por tags se necessário (e não foi usado como critério principal)
+                    if (!empty($tags) && empty($filename) && empty($fileType)) {
+                        // As tags já foram filtradas, nada a fazer
+                    } else if (!empty($tags) && !$this->fileMatchesTags($file->getId(), $tags, $tagOperator)) {
+                        continue;
+                    }
+                    
+                    $results[] = $this->formatFileResult($file);
                 }
             } catch (\Exception $e) {
+                // Arquivo não encontrado
                 continue;
             }
         }
+
+        return $results;
+    }
+    
+    private function searchFilesByNameSQL($userId, $filename, $limit, $offset) {
+        $qb = $this->db->getQueryBuilder();
         
-        return $files;
+        // Buscar na tabela filecache usando LIKE para performance
+        $qb->select('filecache.fileid')
+           ->from('filecache')
+           ->innerJoin('filecache', 'storages', 'storages', 'filecache.storage = storages.numeric_id')
+           ->where($qb->expr()->like('filecache.name', $qb->createNamedParameter('%' . $this->db->escapeLikeParameter($filename) . '%')))
+           ->andWhere($qb->expr()->eq('filecache.mimetype', $qb->createNamedParameter(2, \PDO::PARAM_INT)))
+           ->andWhere($qb->expr()->like('storages.id', $qb->createNamedParameter('%:' . $userId . '%')))
+           ->orderBy('filecache.mtime', 'DESC')
+           ->setMaxResults($limit)
+           ->setFirstResult($offset);
+           
+        $result = $qb->execute();
+        $fileIds = [];
+        
+        while ($row = $result->fetch()) {
+            $fileIds[] = (int)$row['fileid'];
+        }
+        
+        return $fileIds;
     }
 
-    // MÉTODO CORRIGIDO PARA NEXTCLOUD 31
-    private function getFileIdsByTags($tags, $operator) {
+    private function searchFilesByTypeSQL($userId, $fileType, $limit, $offset) {
+        $qb = $this->db->getQueryBuilder();
+        
+        // Tipos de mimetype correspondentes
+        $mimeTypePattern = $this->getMimeTypePattern($fileType);
+        
+        $qb->select('filecache.fileid')
+           ->from('filecache')
+           ->innerJoin('filecache', 'storages', 'storages', 'filecache.storage = storages.numeric_id')
+           ->innerJoin('filecache', 'mimetypes', 'mimetypes', 'filecache.mimetype = mimetypes.id')
+           ->where($qb->expr()->like('mimetypes.mimetype', $qb->createNamedParameter($mimeTypePattern)))
+           ->andWhere($qb->expr()->like('storages.id', $qb->createNamedParameter('%:' . $userId . '%')))
+           ->orderBy('filecache.mtime', 'DESC')
+           ->setMaxResults($limit)
+           ->setFirstResult($offset);
+           
+        $result = $qb->execute();
+        $fileIds = [];
+        
+        while ($row = $result->fetch()) {
+            $fileIds[] = (int)$row['fileid'];
+        }
+        
+        return $fileIds;
+    }
+    
+    private function getRecentFilesSQL($userId, $limit, $offset) {
+        $qb = $this->db->getQueryBuilder();
+        
+        $qb->select('filecache.fileid')
+           ->from('filecache')
+           ->innerJoin('filecache', 'storages', 'storages', 'filecache.storage = storages.numeric_id')
+           ->where($qb->expr()->eq('filecache.mimetype', $qb->createNamedParameter(2, \PDO::PARAM_INT)))
+           ->andWhere($qb->expr()->like('storages.id', $qb->createNamedParameter('%:' . $userId . '%')))
+           ->orderBy('filecache.mtime', 'DESC')
+           ->setMaxResults($limit)
+           ->setFirstResult($offset);
+           
+        $result = $qb->execute();
+        $fileIds = [];
+        
+        while ($row = $result->fetch()) {
+            $fileIds[] = (int)$row['fileid'];
+        }
+        
+        return $fileIds;
+    }
+    
+    private function getMimeTypePattern($fileType) {
+        switch ($fileType) {
+            case 'image':
+                return 'image/%';
+            case 'document':
+                return 'text/%';
+            case 'video':
+                return 'video/%';
+            case 'audio':
+                return 'audio/%';
+            case 'pdf':
+                return 'application/pdf';
+            default:
+                return '%';
+        }
+    }
+
+    // private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator) {
+    //     // Se só temos busca por tags, usar método específico
+    //     if (!empty($tags) && empty($fileType)) {
+    //         return $this->searchByTagsOnly($userFolder, $tags, $tagOperator);
+    //     }
+        
+    //     // Se só temos busca por tipo de arquivo, buscar por extensão comum
+    //     if (!empty($fileType) && empty($tags)) {
+    //         return $this->searchByFileTypeOnly($userFolder, $fileType);
+    //     }
+        
+    //     // Busca geral - pegar arquivos recentes como fallback
+    //     try {
+    //         return $userFolder->getRecent(1000);
+    //     } catch (\Exception $e) {
+    //         // Se getRecent não funcionar, retornar array vazio
+    //         return [];
+    //     }
+    // }
+
+    // private function searchByTagsOnly($userFolder, $tags, $tagOperator) {
+    //     $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
+    //     $files = [];
+        
+    //     foreach ($fileIds as $fileId) {
+    //         try {
+    //             $fileNodes = $userFolder->getById($fileId);
+    //             if (!empty($fileNodes)) {
+    //                 $files[] = $fileNodes[0];
+    //             }
+    //         } catch (\Exception $e) {
+    //             // Arquivo não encontrado ou sem permissão
+    //             continue;
+    //         }
+    //     }
+        
+    //     return $files;
+    // }
+
+    // private function searchByFileTypeOnly($userFolder, $fileType) {
+    //     $extensions = $this->getExtensionsForFileType($fileType);
+    //     $files = [];
+        
+    //     foreach ($extensions as $extension) {
+    //         try {
+    //             // Buscar com ponto antes da extensão
+    //             $searchResults = $userFolder->search('.' . $extension);
+    //             foreach ($searchResults as $result) {
+    //                 // Verificar se realmente termina com a extensão
+    //                 if (strtolower(pathinfo($result->getName(), PATHINFO_EXTENSION)) === $extension) {
+    //                     $files[] = $result;
+    //                 }
+    //             }
+    //         } catch (\Exception $e) {
+    //             continue;
+    //         }
+    //     }
+        
+    //     return $files;
+    // }
+
+     private function getFileIdsByTags($tags, $operator) {
         $fileIds = [];
         
         try {
@@ -233,27 +321,27 @@ class SearchService {
         }
     }
 
-    private function getExtensionsForFileType($fileType) {
-        switch ($fileType) {
-            case 'image':
-                return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+    // private function getExtensionsForFileType($fileType) {
+    //     switch ($fileType) {
+    //         case 'image':
+    //             return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
                 
-            case 'document':
-                return ['doc', 'docx', 'odt', 'txt', 'rtf', 'md'];
+    //         case 'document':
+    //             return ['doc', 'docx', 'odt', 'txt', 'rtf', 'md'];
                 
-            case 'video':
-                return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
+    //         case 'video':
+    //             return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
                 
-            case 'audio':
-                return ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
+    //         case 'audio':
+    //             return ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
                 
-            case 'pdf':
-                return ['pdf'];
+    //         case 'pdf':
+    //             return ['pdf'];
                 
-            default:
-                return [];
-        }
-    }
+    //         default:
+    //             return [];
+    //     }
+    // }
 
     private function fileMatchesTags($fileId, $tags, $tagOperator) {
         $fileTags = $this->getFileTags($fileId);
