@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function performSearch(page = 1) {
+        console.log();
         const filename = document.getElementById('filename').value;
         const tagsInput = document.getElementById('tags').value;
         const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
