@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function () {
     clearBtn.addEventListener('click', clearSearch);
     viewListBtn.addEventListener('click', () => setView('list'));
     viewGridBtn.addEventListener('click', () => setView('grid'));
-    
+
     // Event listeners de paginação
     firstPageBtn.addEventListener('click', () => goToPage(1));
     prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
@@ -92,30 +92,55 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: offset
             })
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            hideLoading();
-            if (data.success) {
-                // Para obter o total real, fazer uma busca sem limite
-                getTotalCount(lastSearchParams).then(total => {
-                    totalResults = total;
-                    displayResults(data.files, offset);
-                    updatePagination();
-                });
-            } else {
-                showError(data.message || 'Erro desconhecido na busca');
-            }
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Erro na busca:', error);
-            showError('Erro de conexão. Tente novamente.');
-        });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    // Para obter o total real, fazer uma busca sem limite
+                    getTotalCount(lastSearchParams).then(total => {
+                        totalResults = total;
+                        displayResults(data.files, offset);
+                        updatePagination();
+                    });
+                } else {
+                    showError(data.message || 'Erro desconhecido na busca');
+                }
+            })
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    console.log('Busca bem sucedida, total de arquivos:', data.files.length);
+
+                    // Para obter o total real, fazer uma busca sem limite
+                    getTotalCount(lastSearchParams).then(total => {
+                        totalResults = total;
+                        console.log('Total de resultados:', totalResults);
+
+                        displayResults(data.files, offset);
+                        updatePagination();
+
+                        // Forçar exibição da paginação
+                        const paginationElement = document.getElementById('pagination');
+                        if (paginationElement && totalResults > 0) {
+                            console.log('Removendo classe hidden da paginação');
+                            paginationElement.classList.remove('hidden');
+                        }
+                    });
+                } else {
+                    showError(data.message || 'Erro desconhecido na busca');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Erro na busca:', error);
+                showError('Erro de conexão. Tente novamente.');
+            });
+
     }
 
     function getTotalCount(params) {
@@ -131,9 +156,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: 0
             })
         })
-        .then(response => response.json())
-        .then(data => data.success ? data.count : 0)
-        .catch(() => 0);
+            .then(response => response.json())
+            .then(data => data.success ? data.count : 0)
+            .catch(() => 0);
     }
 
     function goToPage(page) {
@@ -144,93 +169,93 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updatePagination() {
-    const totalPages = Math.ceil(totalResults / pageSize);
-    
-    console.log('Atualizando paginação:', {
-        totalResults,
-        totalPages,
-        currentPage,
-        pageSize
-    });
-    
-    // Verificar se o elemento existe
-    if (!pagination) {
-        console.error('Elemento de paginação não encontrado!');
-        return;
-    }
-    
-    // Mostrar/ocultar paginação
-    if (totalResults > pageSize) { // Só mostrar se há mais de uma página
-        pagination.classList.remove('hidden');
-    } else if (totalResults > 0) {
-        // Ainda mostrar info mesmo com uma página
-        pagination.classList.remove('hidden');
-    } else {
-        pagination.classList.add('hidden');
-        return;
-    }
+        const totalPages = Math.ceil(totalResults / pageSize);
 
-    // Atualizar informação
-    const start = (currentPage - 1) * pageSize + 1;
-    const end = Math.min(currentPage * pageSize, totalResults);
-    paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+        console.log('Atualizando paginação:', {
+            totalResults,
+            totalPages,
+            currentPage,
+            pageSize
+        });
 
-    // Habilitar/desabilitar botões
-    firstPageBtn.disabled = currentPage === 1;
-    prevPageBtn.disabled = currentPage === 1;
-    nextPageBtn.disabled = currentPage === totalPages;
-    lastPageBtn.disabled = currentPage === totalPages;
+        // Verificar se o elemento existe
+        if (!pagination) {
+            console.error('Elemento de paginação não encontrado!');
+            return;
+        }
 
-    // Gerar números de página
-    pageNumbers.innerHTML = '';
-    
-    // Se só tem uma página, não mostrar números
-    if (totalPages === 1) {
-        return;
-    }
-    
-    // Lógica para mostrar páginas com elipses
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
+        // Mostrar/ocultar paginação
+        if (totalResults > pageSize) { // Só mostrar se há mais de uma página
+            pagination.classList.remove('hidden');
+        } else if (totalResults > 0) {
+            // Ainda mostrar info mesmo com uma página
+            pagination.classList.remove('hidden');
+        } else {
+            pagination.classList.add('hidden');
+            return;
+        }
 
-    if (currentPage <= 3) {
-        endPage = Math.min(5, totalPages);
-    }
-    if (currentPage >= totalPages - 2) {
-        startPage = Math.max(1, totalPages - 4);
-    }
+        // Atualizar informação
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalResults);
+        paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
 
-    // Primeira página
-    if (startPage > 1) {
-        addPageButton(1);
-        if (startPage > 2) {
-            addEllipsis();
+        // Habilitar/desabilitar botões
+        firstPageBtn.disabled = currentPage === 1;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+        lastPageBtn.disabled = currentPage === totalPages;
+
+        // Gerar números de página
+        pageNumbers.innerHTML = '';
+
+        // Se só tem uma página, não mostrar números
+        if (totalPages === 1) {
+            return;
+        }
+
+        // Lógica para mostrar páginas com elipses
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (currentPage <= 3) {
+            endPage = Math.min(5, totalPages);
+        }
+        if (currentPage >= totalPages - 2) {
+            startPage = Math.max(1, totalPages - 4);
+        }
+
+        // Primeira página
+        if (startPage > 1) {
+            addPageButton(1);
+            if (startPage > 2) {
+                addEllipsis();
+            }
+        }
+
+        // Páginas do meio
+        for (let i = startPage; i <= endPage; i++) {
+            addPageButton(i);
+        }
+
+        // Última página
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                addEllipsis();
+            }
+            addPageButton(totalPages);
         }
     }
-
-    // Páginas do meio
-    for (let i = startPage; i <= endPage; i++) {
-        addPageButton(i);
-    }
-
-    // Última página
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            addEllipsis();
-        }
-        addPageButton(totalPages);
-    }
-}
 
     function addPageButton(pageNum) {
         const button = document.createElement('button');
         button.className = 'pagination-button';
         button.textContent = pageNum;
-        
+
         if (pageNum === currentPage) {
             button.classList.add('active');
         }
-        
+
         button.addEventListener('click', () => goToPage(pageNum));
         pageNumbers.appendChild(button);
     }
@@ -260,29 +285,29 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-    hideEmptyContent();
+        hideEmptyContent();
 
-    if (files.length === 0 && currentPage === 1) {
-        showEmptyContent();
-        resultCount.textContent = 'Nenhum resultado encontrado';
-        // Esconder paginação quando não há resultados
-        if (pagination) {
-            pagination.classList.add('hidden');
+        if (files.length === 0 && currentPage === 1) {
+            showEmptyContent();
+            resultCount.textContent = 'Nenhum resultado encontrado';
+            // Esconder paginação quando não há resultados
+            if (pagination) {
+                pagination.classList.add('hidden');
+            }
+            return;
         }
-        return;
-    }
 
-    resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
 
-    let html = '';
+        let html = '';
 
-    files.forEach((file, index) => {
-        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-        const fileSize = formatFileSize(file.size);
-        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-        const fileIcon = getFileIcon(file.name);
+        files.forEach((file, index) => {
+            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            const fileSize = formatFileSize(file.size);
+            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+            const fileIcon = getFileIcon(file.name);
 
-        html += `
+            html += `
             <tr class="file-row" data-file-id="${file.id}">
                 <td class="filename">
                     <div style="display: flex; align-items: center;">
@@ -304,24 +329,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
             </tr>
         `;
-    });
-
-    fileList.innerHTML = html;
-
-    // Forçar exibição da paginação
-    if (pagination && totalResults > 0) {
-        console.log('Mostrando paginação - Total de resultados:', totalResults);
-        pagination.classList.remove('hidden');
-    }
-
-    // Adicionar event listeners para as linhas
-    document.querySelectorAll('.file-row').forEach(row => {
-        row.addEventListener('click', function () {
-            const fileId = this.getAttribute('data-file-id');
-            openFile(fileId);
         });
-    });
-}
+
+        fileList.innerHTML = html;
+
+        // Forçar exibição da paginação
+        if (pagination && totalResults > 0) {
+            console.log('Mostrando paginação - Total de resultados:', totalResults);
+            pagination.classList.remove('hidden');
+        }
+
+        // Adicionar event listeners para as linhas
+        document.querySelectorAll('.file-row').forEach(row => {
+            row.addEventListener('click', function () {
+                const fileId = this.getAttribute('data-file-id');
+                openFile(fileId);
+            });
+        });
+    }
 
 
     function getFileIcon(filename) {
@@ -422,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function setupTagAutocomplete() {
     const tagsInput = document.getElementById('tags');
     let availableTags = [];
-    
+
     // Buscar tags disponíveis
     fetch(OC.generateUrl('/apps/advancedsearch/api/tags'), {
         method: 'GET',
@@ -430,39 +455,39 @@ function setupTagAutocomplete() {
             'requesttoken': OC.requestToken
         }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            availableTags = data.tags;
-            setupAutocomplete(tagsInput, availableTags);
-        }
-    })
-    .catch(error => {
-        console.error('Erro ao buscar tags:', error);
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                availableTags = data.tags;
+                setupAutocomplete(tagsInput, availableTags);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar tags:', error);
+        });
 }
 
 function setupAutocomplete(input, tags) {
     let currentFocus = -1;
-    
-    input.addEventListener('input', function() {
+
+    input.addEventListener('input', function () {
         const value = this.value;
         const lastComma = value.lastIndexOf(',');
         const currentTag = value.substring(lastComma + 1).trim();
-        
+
         closeAllLists();
-        
+
         if (!currentTag) return;
-        
-        const matches = tags.filter(tag => 
+
+        const matches = tags.filter(tag =>
             tag.toLowerCase().includes(currentTag.toLowerCase())
         );
-        
+
         if (matches.length > 0) {
             showSuggestions(input, matches, currentTag, lastComma);
         }
     });
-    
+
     function showSuggestions(input, matches, currentTag, lastComma) {
         const suggestions = document.createElement('div');
         suggestions.className = 'autocomplete-suggestions';
@@ -476,7 +501,7 @@ function setupAutocomplete(input, tags) {
             z-index: 1000;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         `;
-        
+
         matches.forEach(tag => {
             const suggestion = document.createElement('div');
             suggestion.className = 'autocomplete-suggestion';
@@ -486,41 +511,41 @@ function setupAutocomplete(input, tags) {
                 cursor: pointer;
                 border-bottom: 1px solid var(--color-border);
             `;
-            
-            suggestion.addEventListener('click', function() {
+
+            suggestion.addEventListener('click', function () {
                 const beforeCurrent = input.value.substring(0, lastComma + 1);
                 const afterCurrent = input.value.substring(lastComma + 1);
                 input.value = beforeCurrent + (beforeCurrent ? ' ' : '') + tag + ', ';
                 closeAllLists();
                 input.focus();
             });
-            
-            suggestion.addEventListener('mouseenter', function() {
+
+            suggestion.addEventListener('mouseenter', function () {
                 this.style.background = 'var(--color-background-hover)';
             });
-            
-            suggestion.addEventListener('mouseleave', function() {
+
+            suggestion.addEventListener('mouseleave', function () {
                 this.style.background = '';
             });
-            
+
             suggestions.appendChild(suggestion);
         });
-        
+
         input.parentNode.appendChild(suggestions);
-        
+
         // Posicionar sugestões
         const rect = input.getBoundingClientRect();
         suggestions.style.top = (rect.bottom + window.scrollY) + 'px';
         suggestions.style.left = rect.left + 'px';
         suggestions.style.width = rect.width + 'px';
     }
-    
+
     function closeAllLists() {
         const suggestions = document.querySelectorAll('.autocomplete-suggestions');
         suggestions.forEach(el => el.remove());
     }
-    
-    document.addEventListener('click', function(e) {
+
+    document.addEventListener('click', function (e) {
         if (!e.target.closest('.autocomplete-suggestions') && e.target !== input) {
             closeAllLists();
         }

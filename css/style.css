@@ -16,13 +16,11 @@
     z-index: 1000;
 }
 
-#app-content {
-    flex: 1;
-    margin-left: 300px;
-    height: 100vh;
-    overflow: hidden;
+#app-content-wrapper {
+    height: 100%;
+    overflow-y: auto;
     display: flex;
-    flex-direction: column; /* Mudança aqui para organizar verticalmente */
+    flex-direction: column;
 }
 
 #app-content-wrapper {
@@ -221,6 +219,7 @@
     width: 100%;
     border-collapse: collapse;
     margin-top: 0;
+    flex: 1; /* Permite que a tabela cresça */
 }
 
 .list-container thead {
@@ -331,7 +330,7 @@
     padding: 20px;
     border-top: 1px solid var(--color-border);
     background: var(--color-main-background);
-    flex-shrink: 0; /* Não deixar encolher */
+    margin-top: auto; /* Empurra para o fundo */
 }
 
 .pagination-info {
@@ -396,6 +395,14 @@
     background: var(--color-main-background);
     color: var(--color-text);
     font-size: 14px;
+}
+
+/* Estados vazios e loading */
+#emptycontent, #loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-light);
+    flex: 1; /* Ocupa o espaço disponível quando visível */
 }
 
 /* Loading overlay */
