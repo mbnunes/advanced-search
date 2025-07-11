@@ -24,55 +24,55 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function performSearch() {
-        const filename = document.getElementById('filename').value;
-        const tagsInput = document.getElementById('tags').value;
-        const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
-        const fileType = document.getElementById('file-type').value;
+    const filename = document.getElementById('filename').value;
+    const tagsInput = document.getElementById('tags').value;
+    const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
+    const fileType = document.getElementById('file-type').value;
 
-        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()) : [];
+    const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
 
-        // Validação básica
-        if (!filename && !tagsInput && !fileType) {
-            showError('Por favor, insira pelo menos um critério de busca');
-            return;
-        }
-
-        // Mostrar loading
-        showLoading();
-
-        fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'requesttoken': OC.requestToken
-            },
-            body: JSON.stringify({
-                filename: filename,
-                tags: tags,
-                tagOperator: tagOperator,
-                fileType: fileType
-            })
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    displayResults(data.files);
-                } else {
-                    showError(data.message || 'Erro desconhecido na busca');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Erro na busca:', error);
-                showError('Erro de conexão. Tente novamente.');
-            });
+    // Validação básica
+    if (!filename && tags.length === 0 && !fileType) {
+        showError('Por favor, insira pelo menos um critério de busca');
+        return;
     }
+
+    // Mostrar loading
+    showLoading();
+
+    // Construir URL com query parameters
+    const params = new URLSearchParams();
+    if (filename) params.append('filename', filename);
+    if (fileType) params.append('fileType', fileType);
+    params.append('tagOperator', tagOperator);
+    tags.forEach(tag => params.append('tags[]', tag));
+
+    fetch(OC.generateUrl('/apps/advancedsearch/api/search') + '?' + params.toString(), {
+        method: 'GET',
+        headers: {
+            'requesttoken': OC.requestToken
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            displayResults(data.files);
+        } else {
+            showError(data.message || 'Erro desconhecido na busca');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Erro na busca:', error);
+        showError('Erro de conexão. Tente novamente.');
+    });
+}
 
     function clearSearch() {
         document.getElementById('filename').value = '';

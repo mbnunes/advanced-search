@@ -37,8 +37,13 @@ class SearchService {
         
         // Buscar arquivos
         if (!empty($filename)) {
-            // Busca por nome usando a API básica do Nextcloud
-            $searchResults = $userFolder->search($filename);
+            // Certificar que o filename não está vazio antes de chamar search()
+            $searchTerm = trim($filename);
+            if (strlen($searchTerm) > 0) {
+                $searchResults = $userFolder->search($searchTerm);
+            } else {
+                $searchResults = [];
+            }
         } else {
             // Se não tem nome, buscar por outros critérios
             $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
@@ -91,8 +96,8 @@ class SearchService {
         try {
             return $userFolder->getRecent(1000);
         } catch (\Exception $e) {
-            // Se getRecent não funcionar, usar busca básica
-            return $userFolder->search('');
+            // Se getRecent não funcionar, retornar array vazio
+            return [];
         }
     }
 
@@ -121,8 +126,14 @@ class SearchService {
         
         foreach ($extensions as $extension) {
             try {
+                // Buscar com ponto antes da extensão
                 $searchResults = $userFolder->search('.' . $extension);
-                $files = array_merge($files, $searchResults);
+                foreach ($searchResults as $result) {
+                    // Verificar se realmente termina com a extensão
+                    if (strtolower(pathinfo($result->getName(), PATHINFO_EXTENSION)) === $extension) {
+                        $files[] = $result;
+                    }
+                }
             } catch (\Exception $e) {
                 continue;
             }
@@ -265,7 +276,7 @@ class SearchService {
         ];
     }
 
-    // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagsByIds
+    // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagIdsForObjects
     private function getFileTags($fileId) {
         try {
             $tagIds = $this->systemTagObjectMapper->getTagIdsForObjects([$fileId], 'files');

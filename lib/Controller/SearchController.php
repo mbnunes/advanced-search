@@ -19,10 +19,28 @@ class SearchController extends Controller {
     }
 
     #[NoAdminRequired]
-    public function search($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
+    public function search() {
         try {
-            $limit = max(1, min(500, (int)$limit));
-            $offset = max(0, (int)$offset);
+            // Pegar dados do corpo da requisição POST
+            $params = $this->request->getParams();
+            
+            // Extrair parâmetros com valores padrão
+            $filename = isset($params['filename']) ? trim($params['filename']) : '';
+            $tags = isset($params['tags']) && is_array($params['tags']) ? $params['tags'] : [];
+            $tagOperator = isset($params['tagOperator']) ? $params['tagOperator'] : 'AND';
+            $fileType = isset($params['fileType']) ? $params['fileType'] : '';
+            $limit = isset($params['limit']) ? max(1, min(500, (int)$params['limit'])) : 100;
+            $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
+            
+            // Validar tagOperator
+            if (!in_array($tagOperator, ['AND', 'OR'])) {
+                $tagOperator = 'AND';
+            }
+            
+            // Filtrar tags vazias
+            $tags = array_filter($tags, function($tag) {
+                return !empty(trim($tag));
+            });
             
             $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
             
@@ -37,7 +55,7 @@ class SearchController extends Controller {
             return new JSONResponse([
                 'success' => false, 
                 'message' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 
@@ -61,7 +79,7 @@ class SearchController extends Controller {
             return new JSONResponse([
                 'success' => false,
                 'message' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 }
