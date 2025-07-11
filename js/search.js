@@ -8,71 +8,220 @@ document.addEventListener('DOMContentLoaded', function () {
     const viewListBtn = document.getElementById('view-list');
     const viewGridBtn = document.getElementById('view-grid');
 
+    // Elementos de paginação
+    const pagination = document.getElementById('pagination');
+    const paginationInfo = document.getElementById('pagination-info');
+    const firstPageBtn = document.getElementById('first-page');
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    const lastPageBtn = document.getElementById('last-page');
+    const pageNumbers = document.getElementById('page-numbers');
+    const pageSizeSelect = document.getElementById('page-size');
+
     let currentView = 'list';
+    let currentPage = 1;
+    let totalResults = 0;
+    let pageSize = 25;
+    let lastSearchParams = null;
 
     // Event listeners
-    searchBtn.addEventListener('click', performSearch);
+    searchBtn.addEventListener('click', () => performSearch(1));
     clearBtn.addEventListener('click', clearSearch);
     viewListBtn.addEventListener('click', () => setView('list'));
     viewGridBtn.addEventListener('click', () => setView('grid'));
+    
+    // Event listeners de paginação
+    firstPageBtn.addEventListener('click', () => goToPage(1));
+    prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    lastPageBtn.addEventListener('click', () => goToPage(Math.ceil(totalResults / pageSize)));
+    pageSizeSelect.addEventListener('change', (e) => {
+        pageSize = parseInt(e.target.value);
+        if (lastSearchParams) {
+            performSearch(1);
+        }
+    });
 
     // Busca ao pressionar Enter
     document.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            performSearch();
+        if (e.key === 'Enter' && !e.target.matches('#tags')) {
+            performSearch(1);
         }
     });
 
-    function performSearch() {
-    const filename = document.getElementById('filename').value;
-    const tagsInput = document.getElementById('tags').value;
-    const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
-    const fileType = document.getElementById('file-type').value;
+    function performSearch(page = 1) {
+        const filename = document.getElementById('filename').value;
+        const tagsInput = document.getElementById('tags').value;
+        const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
+        const fileType = document.getElementById('file-type').value;
 
-    const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
 
-    // Validação básica
-    if (!filename && tags.length === 0 && !fileType) {
-        showError('Por favor, insira pelo menos um critério de busca');
-        return;
+        // Validação básica
+        if (!filename && tags.length === 0 && !fileType) {
+            showError('Por favor, insira pelo menos um critério de busca');
+            return;
+        }
+
+        // Salvar parâmetros da última busca
+        lastSearchParams = {
+            filename: filename,
+            tags: tags,
+            tagOperator: tagOperator,
+            fileType: fileType
+        };
+
+        currentPage = page;
+        const offset = (page - 1) * pageSize;
+
+        // Mostrar loading
+        showLoading();
+
+        fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'requesttoken': OC.requestToken
+            },
+            body: JSON.stringify({
+                filename: filename,
+                tags: tags,
+                tagOperator: tagOperator,
+                fileType: fileType,
+                limit: pageSize,
+                offset: offset
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                // Para obter o total real, fazer uma busca sem limite
+                getTotalCount(lastSearchParams).then(total => {
+                    totalResults = total;
+                    displayResults(data.files, offset);
+                    updatePagination();
+                });
+            } else {
+                showError(data.message || 'Erro desconhecido na busca');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Erro na busca:', error);
+            showError('Erro de conexão. Tente novamente.');
+        });
     }
 
-    // Mostrar loading
-    showLoading();
+    function getTotalCount(params) {
+        return fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'requesttoken': OC.requestToken
+            },
+            body: JSON.stringify({
+                ...params,
+                limit: 9999,
+                offset: 0
+            })
+        })
+        .then(response => response.json())
+        .then(data => data.success ? data.count : 0)
+        .catch(() => 0);
+    }
 
-    // Construir URL com query parameters
-    const params = new URLSearchParams();
-    if (filename) params.append('filename', filename);
-    if (fileType) params.append('fileType', fileType);
-    params.append('tagOperator', tagOperator);
-    tags.forEach(tag => params.append('tags[]', tag));
+    function goToPage(page) {
+        if (page < 1 || page > Math.ceil(totalResults / pageSize)) {
+            return;
+        }
+        performSearch(page);
+    }
 
-    fetch(OC.generateUrl('/apps/advancedsearch/api/search') + '?' + params.toString(), {
-        method: 'GET',
-        headers: {
-            'requesttoken': OC.requestToken
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        hideLoading();
-        if (data.success) {
-            displayResults(data.files);
+    function updatePagination() {
+        const totalPages = Math.ceil(totalResults / pageSize);
+        
+        // Mostrar/ocultar paginação
+        if (totalResults > 0) {
+            pagination.classList.remove('hidden');
         } else {
-            showError(data.message || 'Erro desconhecido na busca');
+            pagination.classList.add('hidden');
+            return;
         }
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('Erro na busca:', error);
-        showError('Erro de conexão. Tente novamente.');
-    });
-}
+
+        // Atualizar informação
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalResults);
+        paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+
+        // Habilitar/desabilitar botões
+        firstPageBtn.disabled = currentPage === 1;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+        lastPageBtn.disabled = currentPage === totalPages;
+
+        // Gerar números de página
+        pageNumbers.innerHTML = '';
+        
+        // Lógica para mostrar páginas com elipses
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (currentPage <= 3) {
+            endPage = Math.min(5, totalPages);
+        }
+        if (currentPage >= totalPages - 2) {
+            startPage = Math.max(1, totalPages - 4);
+        }
+
+        // Primeira página
+        if (startPage > 1) {
+            addPageButton(1);
+            if (startPage > 2) {
+                addEllipsis();
+            }
+        }
+
+        // Páginas do meio
+        for (let i = startPage; i <= endPage; i++) {
+            addPageButton(i);
+        }
+
+        // Última página
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                addEllipsis();
+            }
+            addPageButton(totalPages);
+        }
+    }
+
+    function addPageButton(pageNum) {
+        const button = document.createElement('button');
+        button.className = 'pagination-button';
+        button.textContent = pageNum;
+        
+        if (pageNum === currentPage) {
+            button.classList.add('active');
+        }
+        
+        button.addEventListener('click', () => goToPage(pageNum));
+        pageNumbers.appendChild(button);
+    }
+
+    function addEllipsis() {
+        const span = document.createElement('span');
+        span.className = 'pagination-ellipsis';
+        span.textContent = '...';
+        span.style.padding = '6px';
+        span.style.color = 'var(--color-text-light)';
+        pageNumbers.appendChild(span);
+    }
 
     function clearSearch() {
         document.getElementById('filename').value = '';
@@ -82,23 +231,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
         fileList.innerHTML = '';
         resultCount.textContent = '';
+        pagination.classList.add('hidden');
+        lastSearchParams = null;
+        currentPage = 1;
+        totalResults = 0;
         showEmptyContent();
     }
 
-    function displayResults(files) {
+    function displayResults(files, offset) {
         hideEmptyContent();
 
-        if (files.length === 0) {
+        if (files.length === 0 && currentPage === 1) {
             showEmptyContent();
             resultCount.textContent = 'Nenhum resultado encontrado';
             return;
         }
 
-        resultCount.textContent = `${files.length} arquivo${files.length !== 1 ? 's' : ''} encontrado${files.length !== 1 ? 's' : ''}`;
+        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
 
         let html = '';
 
-        files.forEach(file => {
+        files.forEach((file, index) => {
             const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
             const fileSize = formatFileSize(file.size);
             const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
@@ -169,6 +322,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function openFile(fileId) {
         // Implementar abertura do arquivo
         console.log('Opening file:', fileId);
+        // Você pode adicionar aqui a lógica para abrir o arquivo
+        // Por exemplo, redirecionar para o visualizador do Nextcloud
+        // window.location.href = OC.generateUrl('/apps/files/?fileid=' + fileId);
     }
 
     function setView(view) {
@@ -189,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loading.classList.remove('hidden');
         emptyContent.classList.add('hidden');
         fileList.innerHTML = '';
+        pagination.classList.add('hidden');
     }
 
     function hideLoading() {
@@ -198,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function showEmptyContent() {
         emptyContent.classList.remove('hidden');
         fileList.innerHTML = '';
+        pagination.classList.add('hidden');
     }
 
     function hideEmptyContent() {
@@ -228,7 +386,6 @@ document.addEventListener('DOMContentLoaded', function () {
     showEmptyContent();
     setupTagAutocomplete();
 });
-
 
 function setupTagAutocomplete() {
     const tagsInput = document.getElementById('tags');

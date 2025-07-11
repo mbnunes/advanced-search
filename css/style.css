@@ -311,6 +311,101 @@
     display: none !important;
 }
 
+/* Paginação */
+.pagination-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-main-background);
+    position: sticky;
+    bottom: 0;
+}
+
+.pagination-info {
+    color: var(--color-text-light);
+    font-size: 14px;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pagination-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.pagination-button {
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-main-background);
+    color: var(--color-text);
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.pagination-button:hover:not(:disabled) {
+    background: var(--color-background-hover);
+}
+
+.pagination-button.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 20px;
+}
+
+.page-size-selector label {
+    color: var(--color-text-light);
+    font-size: 14px;
+}
+
+.page-size-selector select {
+    padding: 4px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-main-background);
+    color: var(--color-text);
+    font-size: 14px;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-overlay .icon-loading {
+    font-size: 32px;
+}
+
+
 /* Responsividade */
 @media (max-width: 768px) {
     #app-navigation {
@@ -342,5 +437,27 @@
     .column-size,
     .column-mtime {
         display: none;
+    }
+
+    .pagination-wrapper {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .pagination-controls {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .pagination-buttons {
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .page-size-selector {
+        justify-content: center;
+        margin-left: 0;
+        margin-top: 10px;
     }
 }
