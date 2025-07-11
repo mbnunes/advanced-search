@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        fileTable.classList.remove('hidden');
+
         // Salvar parâmetros da última busca
         lastSearchParams = {
             filename: filename,
