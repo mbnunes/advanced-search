@@ -15,19 +15,22 @@ class SearchService {
     private $systemTagManager;
     private $systemTagObjectMapper;
     private $db;
+    private $ftsManager;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
-        IDBConnection $db
+        IDBConnection $db,
+        \OCP\FullTextSearch\IFullTextSearchManager $ftsManager // novo!
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
         $this->db = $db;
+        $this->ftsManager = $ftsManager;
     }
 
 
@@ -44,7 +47,33 @@ class SearchService {
         // Buscar por arquivo
         if (!empty($filename)) {
             // Usar busca SQL direta para performance máxima
-            $fileIds = $this->searchFilesByNameSQL($userId, $filename, $limit, $offset);
+            // $fileIds = $this->searchFilesByNameSQL($userId, $filename, $limit, $offset);
+            $ftsQuery = $filename;
+            foreach ($tags as $tag) {
+                $ftsQuery .= ' tag:' . $tag;
+            }
+            if ($fileType) {
+                // Você pode expandir isto se quiser filtrar por tipo
+                // $ftsQuery .= ' mimetype:application/pdf' (exemplo), veja docs fulltextsearch
+            }
+
+            try {
+                $searchResults = $this->ftsManager->search(
+                    $ftsQuery,
+                    $user,
+                    $limit,
+                    $offset,
+                    ['files'] // busca apenas em arquivos
+                );
+
+                $documents = $searchResults->getDocuments();
+                $fileIds = [];
+                foreach ($documents as $doc) {
+                    $fileIds[] = $doc->getId();
+                }
+            } catch (\Exception $e) {
+                throw new \Exception('Erro ao buscar no Elasticsearch: ' . $e->getMessage());
+            }
         } else if (!empty($tags)) {
             // Buscar por tags
             $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
