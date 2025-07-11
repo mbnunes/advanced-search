@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
-    <id>advanced-search</id>
+    <id>advancedsearch</id>
     <name>Advanced Search</name>
     <summary>Advanced file search with tags and logical operators</summary>
     <description>Search files by name and multiple tags using AND/OR operators</description>
@@ -13,7 +13,7 @@
     <navigations>
         <navigation>
             <name>Advanced Search</name>
-            <route>advanced-search.page#index</route>
+            <route>advancedsearch.page#index</route>
             <icon>app.svg</icon>
             <order>10</order>
         </navigation>
