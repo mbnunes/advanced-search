@@ -116,16 +116,22 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 hideLoading();
                 if (data.success) {
+                    // Verificar se data.files existe e é um array
+                    console.log('Tipo de data.files:', typeof data.files);
+                    console.log('data.files é um array?', Array.isArray(data.files));
+                    console.log('Conteúdo de data.files:', data.files);
+
                     // Para obter o total real, fazer uma busca sem limite
                     getTotalCount(lastSearchParams).then(total => {
                         totalResults = total;
-                        displayResults(data.files, offset);
+                        displayResults(data.files || [], offset);
                         updatePagination();
                     });
                 } else {
                     showError(data.message || 'Erro desconhecido na busca');
                 }
             })
+
             .catch(error => {
                 hideLoading();
                 console.error('Erro na busca:', error);
@@ -279,31 +285,42 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-    if (files.length === 0 && currentPage === 1) {
-        showEmptyContent();
-        const emptyTitle = document.querySelector('#emptycontent h2');
-        const emptyText = document.querySelector('#emptycontent p');
-        if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-        if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-        if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
-        return;
-    }
+        if (!files || files.length === 0 && currentPage === 1) {
+            showEmptyContent();
+            const emptyTitle = document.querySelector('#emptycontent h2');
+            const emptyText = document.querySelector('#emptycontent p');
+            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+            return;
+        }
 
-    hideEmptyContent();
-    
-    if (resultCount) {
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-    }
+        hideEmptyContent();
 
-    let html = '';
+        if (resultCount) {
+            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        }
 
-    files.forEach((file, index) => {
-        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-        const fileSize = formatFileSize(file.size);
-        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-        const fileIcon = getFileIcon(file.name);
+        let html = '';
 
-        html += `
+        // Verificar se files é um array, caso contrário, converter
+        const filesArray = Array.isArray(files) ? files : (
+            typeof files === 'object' && files !== null ? Object.values(files) : []
+        );
+
+        // Adicionar log para debug
+        console.log('Tipo de files:', typeof files);
+        console.log('Files é um array?', Array.isArray(files));
+        console.log('Conteúdo de files:', files);
+
+        filesArray.forEach((file, index) => {
+            // Resto do código permanece igual
+            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            const fileSize = formatFileSize(file.size);
+            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+            const fileIcon = getFileIcon(file.name);
+
+            html += `
             <tr class="file-row">
                 <td class="filename">
                     <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
@@ -334,10 +351,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
             </tr>
         `;
-    });
+        });
 
-    fileList.innerHTML = html;
-}
+        fileList.innerHTML = html;
+    }
 
     // Função global para abrir arquivos
     window.advancedSearchOpenFile = function (fileId, filePath, fileName, mimeType) {
