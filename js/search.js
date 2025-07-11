@@ -273,65 +273,103 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-        if (files.length === 0 && currentPage === 1) {
-            showEmptyContent();
-            const emptyTitle = document.querySelector('#emptycontent h2');
-            const emptyText = document.querySelector('#emptycontent p');
-            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
-            return;
-        }
+    if (files.length === 0 && currentPage === 1) {
+        showEmptyContent();
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+        if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+        if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+        return;
+    }
 
-        // Importante: esconder empty content e mostrar tabela
-        hideEmptyContent();
-        
-        if (resultCount) {
-            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-        }
+    hideEmptyContent();
+    
+    if (resultCount) {
+        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+    }
 
-        let html = '';
+    let html = '';
 
-        files.forEach((file, index) => {
-            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-            const fileSize = formatFileSize(file.size);
-            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-            const fileIcon = getFileIcon(file.name);
+    files.forEach((file, index) => {
+        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+        const fileSize = formatFileSize(file.size);
+        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+        const fileIcon = getFileIcon(file.name);
 
-            html += `
-                <tr class="file-row" data-file-id="${file.id}">
-                    <td class="filename">
-                        <div style="display: flex; align-items: center;">
-                            <div class="file-icon ${fileIcon}"></div>
-                            <div>
-                                <div class="file-name">${escapeHtml(file.name)}</div>
-                                <div class="file-path">${escapeHtml(file.path)}</div>
-                            </div>
+        html += `
+            <tr class="file-row" 
+                data-file-id="${file.id}" 
+                data-file-path="${escapeHtml(file.path)}"
+                data-file-name="${escapeHtml(file.name)}"
+                data-mime-type="${escapeHtml(file.mimetype)}">
+                <td class="filename">
+                    <div style="display: flex; align-items: center;">
+                        <div class="file-icon ${fileIcon}"></div>
+                        <div>
+                            <div class="file-name">${escapeHtml(file.name)}</div>
+                            <div class="file-path">${escapeHtml(file.path)}</div>
                         </div>
-                    </td>
-                    <td class="filesize">
-                        <span class="file-size">${fileSize}</span>
-                    </td>
-                    <td class="date">
-                        <span class="file-date">${fileDate}</span>
-                    </td>
-                    <td class="tags">
-                        <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
-                    </td>
-                </tr>
-            `;
+                    </div>
+                </td>
+                <td class="filesize">
+                    <span class="file-size">${fileSize}</span>
+                </td>
+                <td class="date">
+                    <span class="file-date">${fileDate}</span>
+                </td>
+                <td class="tags">
+                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                </td>
+            </tr>
+        `;
+    });
+
+    fileList.innerHTML = html;
+
+    // Adicionar event listeners para as linhas
+    document.querySelectorAll('.file-row').forEach(row => {
+        row.addEventListener('click', function () {
+            const fileId = this.getAttribute('data-file-id');
+            const filePath = this.getAttribute('data-file-path');
+            const fileName = this.getAttribute('data-file-name');
+            const mimeType = this.getAttribute('data-mime-type');
+            
+            openFile(fileId, filePath, fileName, mimeType);
         });
+    });
+}
 
-        fileList.innerHTML = html;
-
-        // Adicionar event listeners para as linhas
-        document.querySelectorAll('.file-row').forEach(row => {
-            row.addEventListener('click', function () {
-                const fileId = this.getAttribute('data-file-id');
-                openFile(fileId);
+function openFile(fileId, filePath, fileName, mimeType) {
+    console.log('Opening file:', { fileId, filePath, fileName, mimeType });
+    
+    // Verificar se é imagem ou vídeo
+    if (mimeType && (mimeType.startsWith('image/') || mimeType.startsWith('video/'))) {
+        // Tentar abrir no viewer
+        if (typeof OCA !== 'undefined' && OCA.Viewer && OCA.Viewer.open) {
+            // Viewer do Nextcloud disponível
+            OCA.Viewer.open({
+                fileId: parseInt(fileId),
+                path: filePath
             });
+        } else {
+            // Fallback: abrir com parâmetro openfile
+            window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}&openfile=1', {
+                fileId: fileId
+            });
+        }
+    } else if (mimeType === 'application/pdf') {
+        // PDFs também podem ser abertos no viewer
+        window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}&openfile=1', {
+            fileId: fileId
+        });
+    } else {
+        // Para outros arquivos, navegar até o arquivo
+        window.location.href = OC.generateUrl('/apps/files/?fileid={fileId}', {
+            fileId: fileId
         });
     }
+}
 
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
