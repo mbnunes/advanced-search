@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Elementos principais
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
     const fileList = document.getElementById('fileList');
@@ -19,32 +20,41 @@ document.addEventListener('DOMContentLoaded', function () {
     const pageNumbers = document.getElementById('page-numbers');
     const pageSizeSelect = document.getElementById('page-size');
 
+    // Verificar elementos essenciais
+    if (!searchBtn || !fileList || !emptyContent) {
+        console.error('Elementos essenciais não encontrados!');
+        return;
+    }
+
     let currentView = 'list';
     let currentPage = 1;
     let totalResults = 0;
     let pageSize = 25;
     let lastSearchParams = null;
 
-    // Event listeners
-    searchBtn.addEventListener('click', () => performSearch(1));
-    clearBtn.addEventListener('click', clearSearch);
-    viewListBtn.addEventListener('click', () => setView('list'));
-    viewGridBtn.addEventListener('click', () => setView('grid'));
-
-    // Event listeners de paginação
-    firstPageBtn.addEventListener('click', () => goToPage(1));
-    prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
-    nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
-    lastPageBtn.addEventListener('click', () => goToPage(Math.ceil(totalResults / pageSize)));
+    // Event listeners - apenas adicionar se o elemento existir
+    if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
+    if (clearBtn) clearBtn.addEventListener('click', clearSearch);
     
-     // Corrigir o event listener do page size
-    pageSizeSelect.addEventListener('change', (e) => {
-        pageSize = parseInt(e.target.value);
-        currentPage = 1; // Voltar para primeira página
-        if (lastSearchParams) {
-            performSearch(1);
-        }
-    });
+    // View buttons podem não existir em todas as páginas
+    if (viewListBtn) viewListBtn.addEventListener('click', () => setView('list'));
+    if (viewGridBtn) viewGridBtn.addEventListener('click', () => setView('grid'));
+    
+    // Event listeners de paginação
+    if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
+    if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
+    if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
+    if (lastPageBtn) lastPageBtn.addEventListener('click', () => goToPage(Math.ceil(totalResults / pageSize)));
+    
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', (e) => {
+            pageSize = parseInt(e.target.value);
+            currentPage = 1;
+            if (lastSearchParams) {
+                performSearch(1);
+            }
+        });
+    }
 
     // Busca ao pressionar Enter
     document.addEventListener('keypress', function (e) {
@@ -120,8 +130,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Erro na busca:', error);
             showError('Erro de conexão. Tente novamente.');
         });
-
-        
     }
 
     function getTotalCount(params) {
@@ -137,9 +145,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: 0
             })
         })
-            .then(response => response.json())
-            .then(data => data.success ? data.count : 0)
-            .catch(() => 0);
+        .then(response => response.json())
+        .then(data => data.success ? data.count : 0)
+        .catch(() => 0);
     }
 
     function goToPage(page) {
@@ -150,26 +158,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updatePagination() {
+        if (!pagination) return;
+        
         const totalPages = Math.ceil(totalResults / pageSize);
-
-        console.log('Atualizando paginação:', {
-            totalResults,
-            totalPages,
-            currentPage,
-            pageSize
-        });
-
-        // Verificar se o elemento existe
-        if (!pagination) {
-            console.error('Elemento de paginação não encontrado!');
-            return;
-        }
-
+        
         // Mostrar/ocultar paginação
-        if (totalResults > pageSize) { // Só mostrar se há mais de uma página
-            pagination.classList.remove('hidden');
-        } else if (totalResults > 0) {
-            // Ainda mostrar info mesmo com uma página
+        if (totalResults > 0) {
             pagination.classList.remove('hidden');
         } else {
             pagination.classList.add('hidden');
@@ -179,52 +173,56 @@ document.addEventListener('DOMContentLoaded', function () {
         // Atualizar informação
         const start = (currentPage - 1) * pageSize + 1;
         const end = Math.min(currentPage * pageSize, totalResults);
-        paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+        if (paginationInfo) {
+            paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+        }
 
         // Habilitar/desabilitar botões
-        firstPageBtn.disabled = currentPage === 1;
-        prevPageBtn.disabled = currentPage === 1;
-        nextPageBtn.disabled = currentPage === totalPages;
-        lastPageBtn.disabled = currentPage === totalPages;
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages;
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages;
 
         // Gerar números de página
-        pageNumbers.innerHTML = '';
-
-        // Se só tem uma página, não mostrar números
-        if (totalPages === 1) {
-            return;
-        }
-
-        // Lógica para mostrar páginas com elipses
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, currentPage + 2);
-
-        if (currentPage <= 3) {
-            endPage = Math.min(5, totalPages);
-        }
-        if (currentPage >= totalPages - 2) {
-            startPage = Math.max(1, totalPages - 4);
-        }
-
-        // Primeira página
-        if (startPage > 1) {
-            addPageButton(1);
-            if (startPage > 2) {
-                addEllipsis();
+        if (pageNumbers) {
+            pageNumbers.innerHTML = '';
+            
+            // Se só tem uma página, não mostrar números
+            if (totalPages === 1) {
+                return;
             }
-        }
+            
+            // Lógica para mostrar páginas com elipses
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
 
-        // Páginas do meio
-        for (let i = startPage; i <= endPage; i++) {
-            addPageButton(i);
-        }
-
-        // Última página
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                addEllipsis();
+            if (currentPage <= 3) {
+                endPage = Math.min(5, totalPages);
             }
-            addPageButton(totalPages);
+            if (currentPage >= totalPages - 2) {
+                startPage = Math.max(1, totalPages - 4);
+            }
+
+            // Primeira página
+            if (startPage > 1) {
+                addPageButton(1);
+                if (startPage > 2) {
+                    addEllipsis();
+                }
+            }
+
+            // Páginas do meio
+            for (let i = startPage; i <= endPage; i++) {
+                addPageButton(i);
+            }
+
+            // Última página
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    addEllipsis();
+                }
+                addPageButton(totalPages);
+            }
         }
     }
 
@@ -232,13 +230,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const button = document.createElement('button');
         button.className = 'pagination-button';
         button.textContent = pageNum;
-
+        
         if (pageNum === currentPage) {
             button.classList.add('active');
         }
-
+        
         button.addEventListener('click', () => goToPage(pageNum));
-        pageNumbers.appendChild(button);
+        if (pageNumbers) pageNumbers.appendChild(button);
     }
 
     function addEllipsis() {
@@ -247,24 +245,27 @@ document.addEventListener('DOMContentLoaded', function () {
         span.textContent = '...';
         span.style.padding = '6px';
         span.style.color = 'var(--color-text-light)';
-        pageNumbers.appendChild(span);
+        if (pageNumbers) pageNumbers.appendChild(span);
     }
 
     function clearSearch() {
         document.getElementById('filename').value = '';
         document.getElementById('tags').value = '';
         document.getElementById('file-type').value = '';
-        document.getElementById('tag-and').checked = true;
+        const tagAndRadio = document.getElementById('tag-and');
+        if (tagAndRadio) tagAndRadio.checked = true;
 
         fileList.innerHTML = '';
-        resultCount.textContent = '';
+        if (resultCount) resultCount.textContent = '';
         
         // Voltar ao estado inicial
         showEmptyContent();
         
         // Restaurar texto inicial
-        document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
-        document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        if (emptyTitle) emptyTitle.textContent = 'Faça uma busca';
+        if (emptyText) emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
         
         lastSearchParams = null;
         currentPage = 1;
@@ -274,17 +275,20 @@ document.addEventListener('DOMContentLoaded', function () {
     function displayResults(files, offset) {
         if (files.length === 0 && currentPage === 1) {
             showEmptyContent();
-            document.querySelector('#emptycontent h2').textContent = 'Nenhum resultado encontrado';
-            document.querySelector('#emptycontent p').textContent = 'Tente ajustar seus critérios de busca';
-            resultCount.textContent = 'Nenhum resultado encontrado';
+            const emptyTitle = document.querySelector('#emptycontent h2');
+            const emptyText = document.querySelector('#emptycontent p');
+            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
             return;
         }
 
         // Importante: esconder empty content e mostrar tabela
         hideEmptyContent();
-        fileTable.classList.remove('hidden');
         
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        if (resultCount) {
+            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        }
 
         let html = '';
 
@@ -301,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <div class="file-icon ${fileIcon}"></div>
                             <div>
                                 <div class="file-name">${escapeHtml(file.name)}</div>
-                               <!-- <div class="file-path">${escapeHtml(file.path)}</div> -->
+                                <div class="file-path">${escapeHtml(file.path)}</div>
                             </div>
                         </div>
                     </td>
@@ -328,7 +332,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-
 
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
@@ -358,50 +361,43 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function openFile(fileId) {
-        // Implementar abertura do arquivo
         console.log('Opening file:', fileId);
-        // Você pode adicionar aqui a lógica para abrir o arquivo
-        // Por exemplo, redirecionar para o visualizador do Nextcloud
         // window.location.href = OC.generateUrl('/apps/files/?fileid=' + fileId);
     }
 
     function setView(view) {
         currentView = view;
 
-        if (view === 'list') {
+        if (view === 'list' && viewListBtn && viewGridBtn) {
             viewListBtn.classList.add('active');
             viewGridBtn.classList.remove('active');
-            // Implementar view de lista
-        } else {
+        } else if (view === 'grid' && viewListBtn && viewGridBtn) {
             viewGridBtn.classList.add('active');
             viewListBtn.classList.remove('active');
-            // Implementar view de grid
         }
     }
 
     function showLoading() {
-        loading.classList.remove('hidden');
-        emptyContent.classList.add('hidden');
+        if (loading) loading.classList.remove('hidden');
+        if (emptyContent) emptyContent.classList.add('hidden');
         if (fileTable) fileTable.classList.add('hidden');
         fileList.innerHTML = '';
         if (pagination) pagination.classList.add('hidden');
     }
 
-
     function hideLoading() {
-        loading.classList.add('hidden');
-        if (fileTable)fileTable.classList.remove('hidden');
+        if (loading) loading.classList.add('hidden');
     }
 
     function showEmptyContent() {
-        emptyContent.classList.remove('hidden');
+        if (emptyContent) emptyContent.classList.remove('hidden');
         if (fileTable) fileTable.classList.add('hidden');
         fileList.innerHTML = '';
         if (pagination) pagination.classList.add('hidden');
     }
 
     function hideEmptyContent() {
-        emptyContent.classList.add('hidden');
+        if (emptyContent) emptyContent.classList.add('hidden');
         if (fileTable) fileTable.classList.remove('hidden');
     }
 
