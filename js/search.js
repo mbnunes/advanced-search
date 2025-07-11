@@ -876,6 +876,48 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pagination) pagination.classList.add('hidden');
     }
 
+    function setView(view) {
+        if (view === currentView) return; // Não fazer nada se a visualização não mudou
+
+        currentView = view;
+
+        if (view === 'list' && viewListBtn && viewGridBtn) {
+            viewListBtn.classList.add('active');
+            viewGridBtn.classList.remove('active');
+        } else if (view === 'grid' && viewListBtn && viewGridBtn) {
+            viewGridBtn.classList.add('active');
+            viewListBtn.classList.remove('active');
+        }
+
+        // Se houver resultados sendo exibidos, redesenhar com a nova visualização
+        if (lastSearchParams && totalResults > 0) {
+            // Obter os arquivos novamente com os mesmos parâmetros
+            const offset = (currentPage - 1) * pageSize;
+
+            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'requesttoken': OC.requestToken
+                },
+                body: JSON.stringify({
+                    ...lastSearchParams,
+                    limit: pageSize,
+                    offset: offset
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayResults(data.files, offset);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao recarregar resultados:', error);
+                });
+        }
+    }
+
     function hideLoading() {
         if (loading) loading.classList.add('hidden');
     }
