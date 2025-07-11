@@ -67,8 +67,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        fileTable.classList.remove('hidden');
-
         // Salvar parâmetros da última busca
         lastSearchParams = {
             filename: filename,
@@ -122,6 +120,8 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Erro na busca:', error);
             showError('Erro de conexão. Tente novamente.');
         });
+
+        fileTable.classList.remove('hidden');
     }
 
     function getTotalCount(params) {
