@@ -27,29 +27,22 @@ class SearchService {
     }
 
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
-        $user = $this->userSession->getUser();
-        if (!$user) {
-            throw new \Exception('User not logged in');
-        }
+    $user = $this->userSession->getUser();
+    if (!$user) {
+        throw new \Exception('User not logged in');
+    }
 
-        $userFolder = $this->rootFolder->getUserFolder($user->getUID());
-        $results = [];
+    $userFolder = $this->rootFolder->getUserFolder($user->getUID());
+    $results = [];
+    $totalCount = 0;
+    
+    // Se tem busca por nome, usar a API de busca otimizada
+    if (!empty($filename)) {
+        // Usar limite maior para contar o total
+        $searchResults = $userFolder->search($filename);
+        $totalCount = count($searchResults);
         
-        // Buscar arquivos
-        if (!empty($filename)) {
-            // Certificar que o filename não está vazio antes de chamar search()
-            $searchTerm = trim($filename);
-            if (strlen($searchTerm) > 0) {
-                $searchResults = $userFolder->search($searchTerm);
-            } else {
-                $searchResults = [];
-            }
-        } else {
-            // Se não tem nome, buscar por outros critérios
-            $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
-        }
-        
-        // Filtrar e processar resultados
+        // Aplicar filtros antes da paginação
         $filteredResults = [];
         foreach ($searchResults as $file) {
             // Verificar se é arquivo (não pasta)
@@ -70,16 +63,28 @@ class SearchService {
             $filteredResults[] = $file;
         }
         
+        $totalCount = count($filteredResults);
+        
         // Aplicar paginação
         $paginatedResults = array_slice($filteredResults, $offset, $limit);
         
-        // Formatar resultados
-        foreach ($paginatedResults as $file) {
-            $results[] = $this->formatFileResult($file);
-        }
-
-        return $results;
+    } else {
+        // Se não tem nome, buscar por outros critérios
+        $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
+        $totalCount = count($searchResults);
+        $paginatedResults = array_slice($searchResults, $offset, $limit);
     }
+    
+    // Formatar resultados
+    foreach ($paginatedResults as $file) {
+        $results[] = $this->formatFileResult($file);
+    }
+
+    return [
+        'files' => $results,
+        'total' => $totalCount
+    ];
+}
 
     private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator) {
         // Se só temos busca por tags, usar método específico

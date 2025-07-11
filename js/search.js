@@ -116,12 +116,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 hideLoading();
                 if (data.success) {
-                    // Para obter o total real, fazer uma busca sem limite
-                    getTotalCount(lastSearchParams).then(total => {
-                        totalResults = total;
-                        displayResults(data.files, offset);
-                        updatePagination();
-                    });
+                    // Usar o total retornado pela API
+                    totalResults = data.total;
+                    displayResults(data.files, offset);
+                    updatePagination();
                 } else {
                     showError(data.message || 'Erro desconhecido na busca');
                 }
@@ -132,6 +130,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 showError('Erro de conexão. Tente novamente.');
             });
     }
+
+    // Remover ou comentar a função getTotalCount, não é mais necessária
+    /*
+    function getTotalCount(params) {
+        // Não mais necessária
+    }
+    */
 
     function getTotalCount(params) {
         return fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
@@ -279,31 +284,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function displayResults(files, offset) {
-    if (files.length === 0 && currentPage === 1) {
-        showEmptyContent();
-        const emptyTitle = document.querySelector('#emptycontent h2');
-        const emptyText = document.querySelector('#emptycontent p');
-        if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-        if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-        if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
-        return;
-    }
+        if (files.length === 0 && currentPage === 1) {
+            showEmptyContent();
+            const emptyTitle = document.querySelector('#emptycontent h2');
+            const emptyText = document.querySelector('#emptycontent p');
+            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
+            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
+            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+            return;
+        }
 
-    hideEmptyContent();
-    
-    if (resultCount) {
-        resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
-    }
+        hideEmptyContent();
 
-    let html = '';
+        if (resultCount) {
+            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+        }
 
-    files.forEach((file, index) => {
-        const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-        const fileSize = formatFileSize(file.size);
-        const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
-        const fileIcon = getFileIcon(file.name);
+        let html = '';
 
-        html += `
+        files.forEach((file, index) => {
+            const tags = file.tags.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            const fileSize = formatFileSize(file.size);
+            const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
+            const fileIcon = getFileIcon(file.name);
+
+            html += `
             <tr class="file-row">
                 <td class="filename">
                     <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
@@ -334,10 +339,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
             </tr>
         `;
-    });
+        });
 
-    fileList.innerHTML = html;
-}
+        fileList.innerHTML = html;
+    }
 
     // Função global para abrir arquivos
     window.advancedSearchOpenFile = function (fileId, filePath, fileName, mimeType) {
