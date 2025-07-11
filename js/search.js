@@ -36,8 +36,11 @@ document.addEventListener('DOMContentLoaded', function () {
     prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
     nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
     lastPageBtn.addEventListener('click', () => goToPage(Math.ceil(totalResults / pageSize)));
+    
+     // Corrigir o event listener do page size
     pageSizeSelect.addEventListener('change', (e) => {
         pageSize = parseInt(e.target.value);
+        currentPage = 1; // Voltar para primeira página
         if (lastSearchParams) {
             performSearch(1);
         }
@@ -93,55 +96,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 offset: offset
             })
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    // Para obter o total real, fazer uma busca sem limite
-                    getTotalCount(lastSearchParams).then(total => {
-                        totalResults = total;
-                        displayResults(data.files, offset);
-                        updatePagination();
-                    });
-                } else {
-                    showError(data.message || 'Erro desconhecido na busca');
-                }
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    console.log('Busca bem sucedida, total de arquivos:', data.files.length);
-
-                    // Para obter o total real, fazer uma busca sem limite
-                    getTotalCount(lastSearchParams).then(total => {
-                        totalResults = total;
-                        console.log('Total de resultados:', totalResults);
-
-                        displayResults(data.files, offset);
-                        updatePagination();
-
-                        // Forçar exibição da paginação
-                        const paginationElement = document.getElementById('pagination');
-                        if (paginationElement && totalResults > 0) {
-                            console.log('Removendo classe hidden da paginação');
-                            paginationElement.classList.remove('hidden');
-                        }
-                    });
-                } else {
-                    showError(data.message || 'Erro desconhecido na busca');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Erro na busca:', error);
-                showError('Erro de conexão. Tente novamente.');
-            });
-
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                // Para obter o total real, fazer uma busca sem limite
+                getTotalCount(lastSearchParams).then(total => {
+                    totalResults = total;
+                    displayResults(data.files, offset);
+                    updatePagination();
+                });
+            } else {
+                showError(data.message || 'Erro desconhecido na busca');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Erro na busca:', error);
+            showError('Erro de conexão. Tente novamente.');
+        });
     }
 
     function getTotalCount(params) {
@@ -283,11 +261,8 @@ document.addEventListener('DOMContentLoaded', function () {
         showEmptyContent();
         
         // Restaurar texto inicial
-        const emptyTitle = document.querySelector('#emptycontent h2');
-        const emptyText = document.querySelector('#emptycontent p');
-        
-        emptyTitle.textContent = 'Faça uma busca';
-        emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+        document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
+        document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
         
         lastSearchParams = null;
         currentPage = 1;
@@ -297,23 +272,17 @@ document.addEventListener('DOMContentLoaded', function () {
     function displayResults(files, offset) {
         if (files.length === 0 && currentPage === 1) {
             showEmptyContent();
+            document.querySelector('#emptycontent h2').textContent = 'Nenhum resultado encontrado';
+            document.querySelector('#emptycontent p').textContent = 'Tente ajustar seus critérios de busca';
             resultCount.textContent = 'Nenhum resultado encontrado';
             return;
         }
 
+        // Importante: esconder empty content e mostrar tabela
         hideEmptyContent();
-
-        // if (files.length === 0 && currentPage === 1) {
-        //     showEmptyContent();
-        //     resultCount.textContent = 'Nenhum resultado encontrado';
-        //     // Esconder paginação quando não há resultados
-        //     if (pagination) {
-        //         pagination.classList.add('hidden');
-        //     }
-        //     return;
-        // }
-
+        
         resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+
         let html = '';
 
         files.forEach((file, index) => {
@@ -323,35 +292,30 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileIcon = getFileIcon(file.name);
 
             html += `
-            <tr class="file-row" data-file-id="${file.id}">
-                <td class="filename">
-                    <div style="display: flex; align-items: center;">
-                        <div class="file-icon ${fileIcon}"></div>
-                        <div>
-                            <div class="file-name">${escapeHtml(file.name)}</div>
+                <tr class="file-row" data-file-id="${file.id}">
+                    <td class="filename">
+                        <div style="display: flex; align-items: center;">
+                            <div class="file-icon ${fileIcon}"></div>
+                            <div>
+                                <div class="file-name">${escapeHtml(file.name)}</div>
+                               <!-- <div class="file-path">${escapeHtml(file.path)}</div> -->
+                            </div>
                         </div>
-                    </div>
-                </td>
-                <td class="filesize">
-                    <span class="file-size">${fileSize}</span>
-                </td>
-                <td class="date">
-                    <span class="file-date">${fileDate}</span>
-                </td>
-                <td class="tags">
-                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
-                </td>
-            </tr>
-        `;
+                    </td>
+                    <td class="filesize">
+                        <span class="file-size">${fileSize}</span>
+                    </td>
+                    <td class="date">
+                        <span class="file-date">${fileDate}</span>
+                    </td>
+                    <td class="tags">
+                        <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                    </td>
+                </tr>
+            `;
         });
 
         fileList.innerHTML = html;
-
-        // Forçar exibição da paginação
-        if (pagination && totalResults > 0) {
-            console.log('Mostrando paginação - Total de resultados:', totalResults);
-            pagination.classList.remove('hidden');
-        }
 
         // Adicionar event listeners para as linhas
         document.querySelectorAll('.file-row').forEach(row => {
@@ -415,10 +379,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function showLoading() {
         loading.classList.remove('hidden');
         emptyContent.classList.add('hidden');
-        fileTable.classList.add('hidden'); // Esconder tabela
+        if (fileTable) fileTable.classList.add('hidden');
         fileList.innerHTML = '';
-        pagination.classList.add('hidden');
+        if (pagination) pagination.classList.add('hidden');
     }
+
 
     function hideLoading() {
         loading.classList.add('hidden');
@@ -426,14 +391,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showEmptyContent() {
         emptyContent.classList.remove('hidden');
-        fileTable.classList.add('hidden'); // Esconder tabela
+        if (fileTable) fileTable.classList.add('hidden');
         fileList.innerHTML = '';
-        pagination.classList.add('hidden');
+        if (pagination) pagination.classList.add('hidden');
     }
 
     function hideEmptyContent() {
         emptyContent.classList.add('hidden');
-        fileTable.classList.remove('hidden'); // Mostrar tabela
+        if (fileTable) fileTable.classList.remove('hidden');
     }
 
     function showError(message) {
@@ -456,14 +421,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return div.innerHTML;
     }
 
-    // Inicializar
     showEmptyContent();
-    // Ajustar texto inicial do emptycontent
-    const emptyTitle = document.querySelector('#emptycontent h2');
-    const emptyText = document.querySelector('#emptycontent p');
-    
-    emptyTitle.textContent = 'Faça uma busca';
-    emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+    document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
+    document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
     
     setupTagAutocomplete();
 });
