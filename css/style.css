@@ -1,0 +1,124 @@
+.advanced-search-app {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.search-container {
+    background: var(--color-main-background);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.search-form {
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--color-text-light);
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+}
+
+.form-group input[type="radio"] {
+    margin-right: 8px;
+    margin-left: 15px;
+}
+
+.form-group input[type="radio"]:first-of-type {
+    margin-left: 0;
+}
+
+#search-btn {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+#search-btn:hover {
+    background: var(--color-primary-hover);
+}
+
+#search-results {
+    margin-top: 20px;
+}
+
+#search-results h3 {
+    color: var(--color-primary);
+    margin-bottom: 15px;
+}
+
+#search-results ul {
+    list-style: none;
+    padding: 0;
+}
+
+#search-results li {
+    background: var(--color-background-hover);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--color-primary);
+}
+
+#search-results li:hover {
+    background: var(--color-background-dark);
+}
+
+.tag {
+    display: inline-block;
+    background: var(--color-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-light);
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px;
+    color: var(--color-text-light);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .advanced-search-app {
+        padding: 10px;
+    }
+    
+    .search-container {
+        padding: 15px;
+    }
+    
+    .form-group input[type="radio"] {
+        display: block;
+        margin: 5px 0;
+    }
+}

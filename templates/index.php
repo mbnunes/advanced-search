@@ -1,32 +1,30 @@
-<div id="advanced-search-app">
+<div class="advanced-search-app">
     <div class="search-container">
-        <h2>Advanced File Search</h2>
+        <h2><?php p($l->t('Advanced File Search')); ?></h2>
         
         <div class="search-form">
             <div class="form-group">
-                <label for="filename">Nome do Arquivo:</label>
-                <input type="text" id="filename" placeholder="Digite o nome do arquivo...">
+                <label for="filename"><?php p($l->t('File Name')); ?>:</label>
+                <input type="text" id="filename" placeholder="<?php p($l->t('Enter file name...')); ?>">
             </div>
             
             <div class="form-group">
-                <label for="tags">Tags:</label>
-                <input type="text" id="tags" placeholder="Digite as tags separadas por vírgula...">
+                <label for="tags"><?php p($l->t('Tags')); ?>:</label>
+                <input type="text" id="tags" placeholder="<?php p($l->t('Enter tags separated by comma...')); ?>">
             </div>
             
             <div class="form-group">
-                <label>Operador para Tags:</label>
+                <label><?php p($l->t('Tag Operator')); ?>:</label>
                 <input type="radio" id="tag-and" name="tagOperator" value="AND" checked>
-                <label for="tag-and">AND (todas as tags)</label>
+                <label for="tag-and"><?php p($l->t('AND (all tags)')); ?></label>
                 
                 <input type="radio" id="tag-or" name="tagOperator" value="OR">
-                <label for="tag-or">OR (qualquer tag)</label>
+                <label for="tag-or"><?php p($l->t('OR (any tag)')); ?></label>
             </div>
             
-            <button id="search-btn">Buscar</button>
+            <button id="search-btn"><?php p($l->t('Search')); ?></button>
         </div>
         
         <div id="search-results"></div>
     </div>
 </div>
-
-<script src="<?php p(\OC::$server->getURLGenerator()->linkTo('advanced-search', 'js/search.js')); ?>"></script>

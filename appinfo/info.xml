@@ -10,6 +10,14 @@
     <author>Seu Nome</author>
     <namespace>AdvancedSearch</namespace>
     <category>files</category>
+    <navigations>
+        <navigation>
+            <name>Advanced Search</name>
+            <route>advanced-search.page.index</route>
+            <icon>app.svg</icon>
+            <order>10</order>
+        </navigation>
+    </navigations>
     <dependencies>
         <nextcloud min-version="31" max-version="31"/>
     </dependencies>
