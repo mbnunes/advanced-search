@@ -497,8 +497,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     tagElement.className = 'tag';
                     tagElement.textContent = tag.name;
                     tagElement.style.cssText = `
-                    background: var(--color-primary-element-light);
-                    color: var(--color-primary-text);
+                    background: green;
+                    color: white;
                     padding: 2px 6px;
                     border-radius: 4px;
                     font-size: 11px;
