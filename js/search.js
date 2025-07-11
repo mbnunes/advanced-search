@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function () {
             showError('Erro de conexão. Tente novamente.');
         });
 
-        fileTable.classList.remove('hidden');
+        
     }
 
     function getTotalCount(params) {
@@ -389,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function hideLoading() {
         loading.classList.add('hidden');
+        if (fileTable)fileTable.classList.remove('hidden');
     }
 
     function showEmptyContent() {
