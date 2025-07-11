@@ -61,8 +61,23 @@ style('advancedsearch', 'style');
     </div>
 
     <div id="app-content">
-        <div id="app-content-wrapper">
+        <div class="files-controls">
+            <div class="breadcrumb">
+                <div class="crumb svg canDrop">
+                    <a href="#" class="icon-home"></a>
+                    <span><?php p($l->t('Search Results')); ?></span>
+                </div>
+            </div>
 
+            <div class="view-controls">
+                <div class="view-switch">
+                    <button id="view-list" class="icon-view-list active" title="<?php p($l->t('List view')); ?>"></button>
+                    <button id="view-grid" class="icon-view-grid" title="<?php p($l->t('Grid view')); ?>"></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="app-content-wrapper">
             <div id="emptycontent" class="hidden">
                 <div class="icon-search"></div>
                 <h2><?php p($l->t('No results found')); ?></h2>
@@ -74,65 +89,69 @@ style('advancedsearch', 'style');
                 <h2><?php p($l->t('Searching...')); ?></h2>
             </div>
 
-            <table id="filestable" class="list-container">
-                <thead>
-                    <tr>
-                        <th id="headerName" class="column-name">
-                            <div id="headerName-content">
-                                <span class="sort-indicator icon-triangle-s"></span>
-                                <span><?php p($l->t('Name')); ?></span>
-                            </div>
-                        </th>
-                        <th id="headerSize" class="column-size">
-                            <span><?php p($l->t('Size')); ?></span>
-                        </th>
-                        <th id="headerDate" class="column-mtime">
-                            <span><?php p($l->t('Modified')); ?></span>
-                        </th>
-                        <th id="headerTags" class="column-tags">
-                            <span><?php p($l->t('Tags')); ?></span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="fileList">
-                    <!-- Resultados serão inseridos aqui -->
-                </tbody>
-            </table>
-            <!-- Adicione isto logo após o fechamento da </table> -->
-            <div class="pagination-wrapper hidden" id="pagination">
-                <div class="pagination-info">
-                    <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
+            <div class="table-container">
+                <div class="table-wrapper">
+                    <table id="filestable" class="list-container">
+                        <thead>
+                            <tr>
+                                <th id="headerName" class="column-name">
+                                    <div id="headerName-content">
+                                        <span class="sort-indicator icon-triangle-s"></span>
+                                        <span><?php p($l->t('Name')); ?></span>
+                                    </div>
+                                </th>
+                                <th id="headerSize" class="column-size">
+                                    <span><?php p($l->t('Size')); ?></span>
+                                </th>
+                                <th id="headerDate" class="column-mtime">
+                                    <span><?php p($l->t('Modified')); ?></span>
+                                </th>
+                                <th id="headerTags" class="column-tags">
+                                    <span><?php p($l->t('Tags')); ?></span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileList">
+                            <!-- Resultados serão inseridos aqui -->
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="pagination-controls">
-                    <div class="pagination-buttons">
-                        <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">
-                            <span class="icon-first"></span>
-                        </button>
-                        <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">
-                            <span class="icon-previous"></span>
-                        </button>
-
-                        <div id="page-numbers" class="pagination-buttons">
-                            <!-- Números das páginas serão inseridos aqui -->
-                        </div>
-
-                        <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">
-                            <span class="icon-next"></span>
-                        </button>
-                        <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">
-                            <span class="icon-last"></span>
-                        </button>
+                <div class="pagination-wrapper hidden" id="pagination">
+                    <div class="pagination-info">
+                        <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
                     </div>
 
-                    <div class="page-size-selector">
-                        <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
-                        <select id="page-size">
-                            <option value="10">10</option>
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
+                    <div class="pagination-controls">
+                        <div class="pagination-buttons">
+                            <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">
+                                <span class="icon-first"></span>
+                            </button>
+                            <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">
+                                <span class="icon-previous"></span>
+                            </button>
+
+                            <div id="page-numbers" class="pagination-buttons">
+                                <!-- Números das páginas serão inseridos aqui -->
+                            </div>
+
+                            <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">
+                                <span class="icon-next"></span>
+                            </button>
+                            <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">
+                                <span class="icon-last"></span>
+                            </button>
+                        </div>
+
+                        <div class="page-size-selector">
+                            <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
+                            <select id="page-size">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
