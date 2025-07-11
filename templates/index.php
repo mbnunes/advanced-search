@@ -74,10 +74,34 @@ style('advancedsearch', 'style');
                     </div>
                 </div>
                 
-                <div class="view-controls">
-                    <div class="view-switch">
-                        <button id="view-list" class="icon-view-list active" title="<?php p($l->t('List view')); ?>"></button>
-                        <button id="view-grid" class="icon-view-grid" title="<?php p($l->t('Grid view')); ?>"></button>
+                <!-- Paginação adicionada aqui -->
+                <div class="pagination-wrapper hidden" id="pagination">
+                    <div class="pagination-info">
+                        <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
+                    </div>
+                    
+                    <div class="pagination-controls">
+                        <div class="pagination-buttons">
+                            <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">«</button>
+                            <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">‹</button>
+                            
+                            <div id="page-numbers" style="display: inline-flex;">
+                                <!-- Números das páginas serão inseridos aqui -->
+                            </div>
+                            
+                            <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">›</button>
+                            <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">»</button>
+                        </div>
+                        
+                        <div class="page-size-selector">
+                            <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
+                            <select id="page-size">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,36 +142,7 @@ style('advancedsearch', 'style');
                 </tbody>
             </table>
             
-            <!-- Paginação adicionada aqui -->
-            <div class="pagination-wrapper hidden" id="pagination">
-                <div class="pagination-info">
-                    <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
-                </div>
-                
-                <div class="pagination-controls">
-                    <div class="pagination-buttons">
-                        <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">«</button>
-                        <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">‹</button>
-                        
-                        <div id="page-numbers" style="display: inline-flex;">
-                            <!-- Números das páginas serão inseridos aqui -->
-                        </div>
-                        
-                        <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">›</button>
-                        <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">»</button>
-                    </div>
-                    
-                    <div class="page-size-selector">
-                        <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
-                        <select id="page-size">
-                            <option value="10">10</option>
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>

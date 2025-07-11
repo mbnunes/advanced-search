@@ -314,7 +314,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="file-icon ${fileIcon}"></div>
                         <div>
                             <div class="file-name">${escapeHtml(file.name)}</div>
-                            <div class="file-path">${escapeHtml(file.path)}</div>
                         </div>
                     </div>
                 </td>
