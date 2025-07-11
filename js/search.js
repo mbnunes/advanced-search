@@ -1,12 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Desabilitar Viewer temporariamente se estiver causando conflitos
-    if (typeof OCA !== 'undefined' && OCA.Viewer) {
-        // Guardar referência antiga
-        window._oldViewer = OCA.Viewer;
-        // Temporariamente desabilitar
-        delete OCA.Viewer;
-    }
-    
+
     // Elementos principais
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
@@ -310,39 +303,44 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileDate = new Date(file.mtime * 1000).toLocaleDateString();
             const fileIcon = getFileIcon(file.name);
 
+            // Fazer o path clicável diretamente
+            const clickHandler = `onclick="window.advancedSearchOpenFile('${file.id}', '${escapeHtml(file.path)}', '${escapeHtml(file.name)}', '${escapeHtml(file.mimetype || '')}')"`;
+
             html += `
-                <tr class="file-row" 
-                    data-file-id="${file.id}" 
-                    data-file-path="${escapeHtml(file.path)}"
-                    data-file-name="${escapeHtml(file.name)}"
-                    data-mime-type="${escapeHtml(file.mimetype || '')}">
-                    <td class="filename">
-                        <div style="display: flex; align-items: center;">
-                            <div class="file-icon ${fileIcon}"></div>
-                            <div>
-                                <div class="file-name">${escapeHtml(file.name)}</div>
-                                <div class="file-path">${escapeHtml(file.path)}</div>
-                            </div>
+            <tr class="file-row" ${clickHandler} style="cursor: pointer;">
+                <td class="filename">
+                    <div style="display: flex; align-items: center;">
+                        <div class="file-icon ${fileIcon}"></div>
+                        <div>
+                            <div class="file-name">${escapeHtml(file.name)}</div>
+                            <div class="file-path">${escapeHtml(file.path)}</div>
                         </div>
-                    </td>
-                    <td class="filesize">
-                        <span class="file-size">${fileSize}</span>
-                    </td>
-                    <td class="date">
-                        <span class="file-date">${fileDate}</span>
-                    </td>
-                    <td class="tags">
-                        <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
-                    </td>
-                </tr>
-            `;
+                    </div>
+                </td>
+                <td class="filesize">
+                    <span class="file-size">${fileSize}</span>
+                </td>
+                <td class="date">
+                    <span class="file-date">${fileDate}</span>
+                </td>
+                <td class="tags">
+                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                </td>
+            </tr>
+        `;
         });
 
         fileList.innerHTML = html;
-
-        // Adicionar event listeners para as linhas - Usar delegação de eventos
-        fileList.addEventListener('click', handleFileClick);
     }
+
+    // Função global para abrir arquivos
+    window.advancedSearchOpenFile = function (fileId, filePath, fileName, mimeType) {
+        console.log('Abrindo arquivo:', { fileId, filePath, fileName, mimeType });
+
+        // Simplesmente navegar até o arquivo
+        const fileUrl = OC.generateUrl('/apps/files/?fileid=' + fileId);
+        window.location.href = fileUrl;
+    };
 
     // Função separada para lidar com cliques
     function handleFileClick(event) {

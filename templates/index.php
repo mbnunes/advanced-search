@@ -2,11 +2,6 @@
 script('advancedsearch', 'search');
 style('advancedsearch', 'style');
 
-// Carregar o viewer se disponível
-if (\OC::$server->getAppManager()->isEnabledForUser('viewer')) {
-    \OCP\Util::addScript('viewer', 'viewer-main');
-}
-
 ?>
 
 <div id="app">
