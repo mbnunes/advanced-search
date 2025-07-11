@@ -277,11 +277,11 @@
     color: var(--color-text-light);
 }
 
-.file-tags {
+/* .file-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-}
+} */
 /* 
 .tag {
     display: inline-block;
