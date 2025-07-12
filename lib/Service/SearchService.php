@@ -13,6 +13,7 @@ class SearchService {
     private $userSession;
     private $systemTagManager;
     private $systemTagObjectMapper;
+    private $fullTextSearchManager;
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -24,9 +25,20 @@ class SearchService {
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
+        
+        // Tentar obter o FullTextSearchManager de forma segura
+        try {
+            if (class_exists('\OCP\FullTextSearch\IFullTextSearchManager')) {
+                $this->fullTextSearchManager = \OC::$server->get(\OCP\FullTextSearch\IFullTextSearchManager::class);
+            } else {
+                $this->fullTextSearchManager = null;
+            }
+        } catch (\Exception $e) {
+            $this->fullTextSearchManager = null;
+        }
     }
 
-    // SUA FUNÇÃO ORIGINAL searchFiles - EXATAMENTE COMO ESTAVA
+    // MANTER SUA FUNÇÃO ORIGINAL searchFiles EXATAMENTE COMO ESTAVA
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
         $user = $this->userSession->getUser();
         if (!$user) {
@@ -82,42 +94,112 @@ class SearchService {
         return $results;
     }
 
-    // NOVA FUNÇÃO SIMPLES PARA BUSCA MELHORADA (SEM QUEBRAR O QUE JÁ FUNCIONA)
-    public function searchFilesEnhanced($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
-        // Por enquanto, apenas chamar a função original
-        // Mais tarde podemos melhorar isso se conseguirmos acessar o FullTextSearch
-        $results = $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+    // NOVA FUNÇÃO PARA FULL TEXT SEARCH (OPCIONAL)
+    public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
+         // Log para debug
+        error_log('searchFilesWithFullText called with filename: ' . $filename);
+        error_log('FullTextSearchManager exists: ' . ($this->fullTextSearchManager ? 'true' : 'false'));
         
-        // Marcar como enhanced nos resultados
-        foreach ($results as &$result) {
-            $result['searchType'] = 'enhanced';
+        // Se full text search não estiver disponível ou não há busca por texto, usar método tradicional
+        if (!$this->fullTextSearchManager || empty($filename)) {
+            error_log('Using traditional search - no manager or empty filename');
+            return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
         }
-        
-        return $results;
-    }
 
-    // FUNÇÃO SIMPLES PARA VERIFICAR SE FULLTEXTSEARCH ESTÁ DISPONÍVEL
-    public function isFullTextSearchAvailable() {
         try {
-            // Verificar se o app está habilitado usando OCC
-            $output = [];
-            $return_var = 0;
-            exec('sudo -u www-data php ' . \OC::$SERVERROOT . '/occ app:list | grep fulltextsearch', $output, $return_var);
+            $user = $this->userSession->getUser();
+            if (!$user) {
+                throw new \Exception('User not logged in');
+            }
+
+            // Criar requisição de busca
+            $searchRequest = $this->fullTextSearchManager->createSearchRequest();
+            $searchRequest->setSearch($filename);
             
-            // Se encontrou fulltextsearch habilitado
-            foreach ($output as $line) {
-                if (strpos($line, 'fulltextsearch') !== false && strpos($line, 'Enabled') !== false) {
-                    return true;
+            // Configurar paginação
+            $page = floor($offset / $limit) + 1;
+            $searchRequest->setPage($page);
+            $searchRequest->setSize($limit);
+            
+            // Definir provedor
+            $searchRequest->setProviders(['files']);
+            
+            // Executar busca
+            $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
+            
+            // Processar resultados
+            $results = [];
+            $userFolder = $this->rootFolder->getUserFolder($user->getUID());
+            
+            foreach ($searchResult->getDocuments() as $document) {
+                try {
+                    $fileInfo = $this->getFileInfoFromDocument($document, $userFolder);
+                    if ($fileInfo && $fileInfo->getType() === FileInfo::TYPE_FILE) {
+                        // Aplicar filtros
+                        if (!empty($fileType) && !$this->matchesFileType($fileInfo, $fileType)) {
+                            continue;
+                        }
+                        
+                        if (!empty($tags) && !$this->fileMatchesTags($fileInfo->getId(), $tags, $tagOperator)) {
+                            continue;
+                        }
+                        
+                        $result = $this->formatFileResult($fileInfo);
+                        $result['searchType'] = 'fulltext';
+                        $result['score'] = $document->getScore();
+                        $result['excerpt'] = $document->getExcerpt();
+                        $results[] = $result;
+                    }
+                } catch (\Exception $e) {
+                    continue;
                 }
             }
             
-            return false;
+            return $results;
+            
         } catch (\Exception $e) {
-            return false;
+            // Se der erro, usar busca tradicional
+            return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
         }
     }
 
-    // TODAS AS SUAS FUNÇÕES ORIGINAIS ABAIXO - SEM ALTERAÇÃO
+    private function getFileInfoFromDocument($document, $userFolder) {
+        $fileId = $document->getId();
+        
+        if ($fileId) {
+            try {
+                $nodes = $userFolder->getById($fileId);
+                if (!empty($nodes)) {
+                    return $nodes[0];
+                }
+            } catch (\Exception $e) {
+                // Continuar
+            }
+        }
+        
+        return null;
+    }
+
+    public function isFullTextSearchAvailable() {
+    if (!$this->fullTextSearchManager) {
+        return false;
+    }
+    
+    try {
+        // Verificar se o serviço está disponível
+        $isAvailable = $this->fullTextSearchManager->isAvailable();
+        
+        // Log para debug
+        error_log('FullTextSearch isAvailable(): ' . ($isAvailable ? 'true' : 'false'));
+        
+        return $isAvailable;
+    } catch (\Exception $e) {
+        error_log('Error checking FullTextSearch availability: ' . $e->getMessage());
+        return false;
+    }
+}
+
+    // MANTER TODAS AS SUAS FUNÇÕES ORIGINAIS ABAIXO SEM ALTERAÇÃO
 
     private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator) {
         // Se só temos busca por tags, usar método específico
@@ -310,7 +392,8 @@ class SearchService {
             'size' => $file->getSize(),
             'mtime' => $file->getMTime(),
             'mimetype' => $file->getMimetype(),
-            'tags' => $this->getFileTags($file->getId())
+            'tags' => $this->getFileTags($file->getId()),
+            'searchType' => 'traditional'
         ];
     }
 
@@ -338,5 +421,35 @@ class SearchService {
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    // Funcao de DEBUG
+    public function debugFullTextSearch() {
+        $debug = [];
+        
+        // Verificar se a classe existe
+        $debug['class_exists'] = class_exists('\OCP\FullTextSearch\IFullTextSearchManager');
+        
+        // Verificar se o manager foi injetado
+        $debug['manager_exists'] = $this->fullTextSearchManager !== null;
+        
+        if ($this->fullTextSearchManager) {
+            try {
+                $debug['is_available'] = $this->fullTextSearchManager->isAvailable();
+            } catch (\Exception $e) {
+                $debug['is_available_error'] = $e->getMessage();
+            }
+            
+            try {
+                // Tentar listar provedores
+                $debug['providers'] = method_exists($this->fullTextSearchManager, 'getProviders') 
+                    ? $this->fullTextSearchManager->getProviders() 
+                    : 'method_not_exists';
+            } catch (\Exception $e) {
+                $debug['providers_error'] = $e->getMessage();
+            }
+        }
+        
+        return $debug;
     }
 }
