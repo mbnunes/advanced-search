@@ -24,15 +24,19 @@ class SearchService {
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
-        // ADICIONAR ESTE PARÂMETRO
-        IFullTextSearchManager $fullTextSearchManager = null
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
          // ADICIONAR ESTA LINHA
-        $this->fullTextSearchManager = $fullTextSearchManager;
+         // Tentar injetar o FullTextSearchManager de forma segura
+        try {
+            $this->fullTextSearchManager = \OC::$server->get(\OCP\FullTextSearch\IFullTextSearchManager::class);
+        } catch (\Exception $e) {
+            $this->fullTextSearchManager = null;
+            error_log('FullTextSearchManager não disponível: ' . $e->getMessage());
+        }
     }
 
     // ADICIONAR ESTE MÉTODO NOVO ANTES DO searchFiles EXISTENTE
@@ -173,10 +177,7 @@ class SearchService {
         return null;
     }
 
-    public function isFullTextSearchAvailable() {
-        return $this->fullTextSearchManager && $this->fullTextSearchManager->isAvailable();
-    }
-
+    
 
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
         $user = $this->userSession->getUser();
