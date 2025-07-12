@@ -98,6 +98,7 @@ class SearchController extends Controller {
     }
 
     #[NoAdminRequired]
+    #[NoCSRFRequired]  // ADICIONAR ESTA LINHA
     public function debug() {
         try {
             $debug = $this->searchService->debugFullTextSearch();
