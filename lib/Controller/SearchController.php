@@ -96,4 +96,21 @@ class SearchController extends Controller {
             ], 500);
         }
     }
+
+    #[NoAdminRequired]
+    public function debug() {
+        try {
+            $debug = $this->searchService->debugFullTextSearch();
+            
+            return new JSONResponse([
+                'success' => true,
+                'debug' => $debug
+            ]);
+        } catch (\Exception $e) {
+            return new JSONResponse([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

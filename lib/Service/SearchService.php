@@ -422,4 +422,34 @@ class SearchService {
             return [];
         }
     }
+
+    // Funcao de DEBUG
+    public function debugFullTextSearch() {
+        $debug = [];
+        
+        // Verificar se a classe existe
+        $debug['class_exists'] = class_exists('\OCP\FullTextSearch\IFullTextSearchManager');
+        
+        // Verificar se o manager foi injetado
+        $debug['manager_exists'] = $this->fullTextSearchManager !== null;
+        
+        if ($this->fullTextSearchManager) {
+            try {
+                $debug['is_available'] = $this->fullTextSearchManager->isAvailable();
+            } catch (\Exception $e) {
+                $debug['is_available_error'] = $e->getMessage();
+            }
+            
+            try {
+                // Tentar listar provedores
+                $debug['providers'] = method_exists($this->fullTextSearchManager, 'getProviders') 
+                    ? $this->fullTextSearchManager->getProviders() 
+                    : 'method_not_exists';
+            } catch (\Exception $e) {
+                $debug['providers_error'] = $e->getMessage();
+            }
+        }
+        
+        return $debug;
+    }
 }

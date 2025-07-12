@@ -5,5 +5,6 @@ return [
         ['name' => 'search#search', 'url' => '/api/search', 'verb' => 'POST'],
         ['name' => 'search#searchWithFilters', 'url' => '/api/search/filters', 'verb' => 'GET'],
         ['name' => 'search#getTags', 'url' => '/api/tags', 'verb' => 'GET'],
+        ['name' => 'search#debug', 'url' => '/api/debug', 'verb' => 'GET'], // ADICIONAR ESTA LINHA
     ]
 ];
