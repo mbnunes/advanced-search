@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let pageSize = 25;
     let lastSearchParams = null;
     let fullTextSearchAvailable = true;
-    let lastSearchType = 'fulltext';
+    let lastSearchType = 'traditional';
 
     // Event listeners - apenas adicionar se o elemento existir
     if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
         lastSearchParams = null;
         currentPage = 1;
         totalResults = 0;
-        lastSearchType = 'fulltext';
+        lastSearchType = 'traditional';
     }
 
     function displayResults(files, offset) {
