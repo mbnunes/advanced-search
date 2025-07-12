@@ -23,6 +23,8 @@ class SearchController extends Controller {
         try {
             // Pegar dados do corpo da requisição POST
             $params = $this->request->getParams();
+
+            $debug = $this->searchService->debugFullTextSearch();
             
             // Extrair parâmetros com valores padrão
             $filename = isset($params['filename']) ? trim($params['filename']) : '';
@@ -63,7 +65,8 @@ class SearchController extends Controller {
                 'searchType' => $actualSearchType,
                 'fullTextSearchAvailable' => $fullTextAvailable,
                 'requestedFullText' => $useFullTextSearch,
-                'hasFilename' => !empty($filename)
+                'hasFilename' => !empty($filename),
+                'debug' => $debug  // INFORMAÇÕES DE DEBUG
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([
