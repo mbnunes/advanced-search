@@ -96,8 +96,13 @@ class SearchService {
 
     // NOVA FUNÇÃO PARA FULL TEXT SEARCH (OPCIONAL)
     public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
+         // Log para debug
+        error_log('searchFilesWithFullText called with filename: ' . $filename);
+        error_log('FullTextSearchManager exists: ' . ($this->fullTextSearchManager ? 'true' : 'false'));
+        
         // Se full text search não estiver disponível ou não há busca por texto, usar método tradicional
-        if (!$this->isFullTextSearchAvailable() || empty($filename)) {
+        if (!$this->fullTextSearchManager || empty($filename)) {
+            error_log('Using traditional search - no manager or empty filename');
             return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
         }
 
@@ -176,16 +181,23 @@ class SearchService {
     }
 
     public function isFullTextSearchAvailable() {
-        if (!$this->fullTextSearchManager) {
-            return false;
-        }
-        
-        try {
-            return $this->fullTextSearchManager->isAvailable();
-        } catch (\Exception $e) {
-            return false;
-        }
+    if (!$this->fullTextSearchManager) {
+        return false;
     }
+    
+    try {
+        // Verificar se o serviço está disponível
+        $isAvailable = $this->fullTextSearchManager->isAvailable();
+        
+        // Log para debug
+        error_log('FullTextSearch isAvailable(): ' . ($isAvailable ? 'true' : 'false'));
+        
+        return $isAvailable;
+    } catch (\Exception $e) {
+        error_log('Error checking FullTextSearch availability: ' . $e->getMessage());
+        return false;
+    }
+}
 
     // MANTER TODAS AS SUAS FUNÇÕES ORIGINAIS ABAIXO SEM ALTERAÇÃO
 

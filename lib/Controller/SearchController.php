@@ -42,14 +42,16 @@ class SearchController extends Controller {
             $tags = array_filter($tags, function($tag) {
                 return !empty(trim($tag));
             });
+
+            $fullTextAvailable = $this->searchService->isFullTextSearchAvailable();
             
             // Escolher método de busca
-            if ($useFullTextSearch && !empty($filename)) {
+            if ($useFullTextSearch && !empty($filename) && $fullTextAvailable) {
                 $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchType = 'fulltext';
+                $actualSearchType = 'fulltext';
             } else {
                 $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchType = 'traditional';
+                $actualSearchType = 'traditional';
             }
             
             return new JSONResponse([
@@ -58,8 +60,10 @@ class SearchController extends Controller {
                 'count' => count($results),
                 'limit' => $limit,
                 'offset' => $offset,
-                'searchType' => $searchType,
-                'fullTextSearchAvailable' => $this->searchService->isFullTextSearchAvailable()
+                'searchType' => $actualSearchType,
+                'fullTextSearchAvailable' => $fullTextAvailable,
+                'requestedFullText' => $useFullTextSearch,
+                'hasFilename' => !empty($filename)
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([
