@@ -281,6 +281,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pageNumbers) pageNumbers.appendChild(span);
     }
 
+    function handleFileClick(event) {
+        // Encontrar a linha clicada
+        const row = event.target.closest('.file-row');
+        if (!row) return;
+
+        const fileId = row.getAttribute('data-file-id');
+        const filePath = row.getAttribute('data-file-path');
+        const fileName = row.getAttribute('data-file-name');
+        const mimeType = row.getAttribute('data-mime-type');
+
+        openFile(fileId, filePath, fileName, mimeType);
+    }
+
     function clearSearch() {
         // Remover o event listener antes de limpar
         if (fileList) {
@@ -705,20 +718,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupTagAutocomplete();
 });
-
-// Função separada para lidar com cliques
-function handleFileClick(event) {
-    // Encontrar a linha clicada
-    const row = event.target.closest('.file-row');
-    if (!row) return;
-
-    const fileId = row.getAttribute('data-file-id');
-    const filePath = row.getAttribute('data-file-path');
-    const fileName = row.getAttribute('data-file-name');
-    const mimeType = row.getAttribute('data-mime-type');
-
-    openFile(fileId, filePath, fileName, mimeType);
-}
 
 function setupTagAutocomplete() {
     const tagsInput = document.getElementById('tags');
