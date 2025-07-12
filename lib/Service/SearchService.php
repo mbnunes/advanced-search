@@ -7,24 +7,176 @@ use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
+// ADICIONAR ESTAS IMPORTS
+use OCP\FullTextSearch\IFullTextSearchManager;
+use OCP\FullTextSearch\Model\ISearchRequest;
 
 class SearchService {
     private $rootFolder;
     private $userSession;
     private $systemTagManager;
     private $systemTagObjectMapper;
+    // ADICIONAR ESTA PROPRIEDADE
+    private $fullTextSearchManager;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
-        ISystemTagObjectMapper $systemTagObjectMapper
+        ISystemTagObjectMapper $systemTagObjectMapper,
+        // ADICIONAR ESTE PARÂMETRO
+        IFullTextSearchManager $fullTextSearchManager = null
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
+         // ADICIONAR ESTA LINHA
+        $this->fullTextSearchManager = $fullTextSearchManager;
     }
+
+    // ADICIONAR ESTE MÉTODO NOVO ANTES DO searchFiles EXISTENTE
+    public function searchFilesWithFullText($query = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
+        $user = $this->userSession->getUser();
+        if (!$user) {
+            throw new \Exception('User not logged in');
+        }
+
+        // Verificar se full text search está disponível
+        if ($this->fullTextSearchManager && $this->fullTextSearchManager->isAvailable()) {
+            try {
+                return $this->performFullTextSearch($query, $tags, $tagOperator, $fileType, $limit, $offset);
+            } catch (\Exception $e) {
+                // Se falhar, usar busca tradicional como fallback
+                error_log('Full text search failed, falling back to traditional search: ' . $e->getMessage());
+                return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
+            }
+        } else {
+            // Usar busca tradicional se full text search não estiver disponível
+            return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
+        }
+    }
+
+    // ADICIONAR ESTE MÉTODO NOVO
+    private function performFullTextSearch($query, $tags, $tagOperator, $fileType, $limit, $offset) {
+        $user = $this->userSession->getUser();
+        
+        // Criar requisição de busca
+        $searchRequest = $this->fullTextSearchManager->createSearchRequest();
+        
+        // Configurar busca
+        if (!empty($query)) {
+            $searchRequest->setSearch($query);
+        }
+        
+        // Configurar paginação
+        $page = floor($offset / $limit) + 1;
+        $searchRequest->setPage($page);
+        $searchRequest->setSize($limit);
+        
+        // Definir provedor (arquivos)
+        $searchRequest->setProviders(['files']);
+        
+        // Configurar opções específicas
+        $searchRequest->setOptions([
+            'files_local' => true,
+            'files_external' => true,
+            'files_group_folders' => true,
+        ]);
+        
+        // Aplicar filtros por tipo de arquivo
+        if (!empty($fileType)) {
+            $this->applyFileTypeFilter($searchRequest, $fileType);
+        }
+        
+        // Executar busca
+        $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
+        
+        // Processar resultados
+        $results = [];
+        $userFolder = $this->rootFolder->getUserFolder($user->getUID());
+        
+        foreach ($searchResult->getDocuments() as $document) {
+            try {
+                // Obter informações do arquivo a partir do documento
+                $fileInfo = $this->getFileInfoFromDocument($document, $userFolder);
+                if ($fileInfo) {
+                    // Aplicar filtros de tags se necessário
+                    if (!empty($tags) && !$this->fileMatchesTags($fileInfo->getId(), $tags, $tagOperator)) {
+                        continue;
+                    }
+                    
+                    $results[] = $this->formatFileResult($fileInfo, $document);
+                }
+            } catch (\Exception $e) {
+                // Skip arquivos que não podem ser acessados
+                continue;
+            }
+        }
+        
+        return $results;
+    }
+
+    // ADICIONAR ESTE MÉTODO NOVO
+    private function applyFileTypeFilter($searchRequest, $fileType) {
+        $mimeTypes = $this->getMimeTypesForFileType($fileType);
+        if (!empty($mimeTypes)) {
+            $searchRequest->addFilter('mimetype', $mimeTypes);
+        }
+    }
+
+    // ADICIONAR ESTE MÉTODO NOVO
+    private function getMimeTypesForFileType($fileType) {
+        switch ($fileType) {
+            case 'image':
+                return ['image/*'];
+            case 'document':
+                return [
+                    'text/*',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.oasis.opendocument.text'
+                ];
+            case 'video':
+                return ['video/*'];
+            case 'audio':
+                return ['audio/*'];
+            case 'pdf':
+                return ['application/pdf'];
+            default:
+                return [];
+        }
+    }
+
+    // ADICIONAR ESTE MÉTODO NOVO
+    private function getFileInfoFromDocument($document, $userFolder) {
+        // Tentar obter o arquivo pelo ID
+        $fileId = $document->getId();
+        
+        try {
+            $nodes = $userFolder->getById($fileId);
+            if (!empty($nodes)) {
+                return $nodes[0];
+            }
+        } catch (\Exception $e) {
+            // Se não conseguir pelo ID, tentar pelo path
+            $path = $document->getInfoArray()['path'] ?? '';
+            if ($path) {
+                try {
+                    return $userFolder->get($path);
+                } catch (\Exception $e) {
+                    return null;
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    public function isFullTextSearchAvailable() {
+        return $this->fullTextSearchManager && $this->fullTextSearchManager->isAvailable();
+    }
+
 
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
         $user = $this->userSession->getUser();
@@ -263,8 +415,8 @@ class SearchService {
         }
     }
 
-    private function formatFileResult($file) {
-        return [
+    private function formatFileResult($file, $document = null) {
+        $result = [
             'id' => $file->getId(),
             'name' => $file->getName(),
             'path' => $file->getPath(),
@@ -274,6 +426,15 @@ class SearchService {
             'mimetype' => $file->getMimetype(),
             'tags' => $this->getFileTags($file->getId())
         ];
+        
+        // Se temos informações do full text search, adicionar
+        if ($document) {
+            $result['score'] = $document->getScore();
+            $result['highlights'] = $document->getHighlights();
+            $result['excerpt'] = $document->getExcerpt();
+        }
+        
+        return $result;
     }
 
     // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagIdsForObjects

@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let totalResults = 0;
     let pageSize = 25;
     let lastSearchParams = null;
+    // ADICIONAR ESTAS VARIÁVEIS
+    let fullTextSearchAvailable = false;
+    let lastSearchType = 'traditional';
 
     // Event listeners - apenas adicionar se o elemento existir
     if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
@@ -64,6 +67,39 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+     // ADICIONAR ESTA VERIFICAÇÃO NO INÍCIO
+    checkFullTextSearchAvailability();
+
+    // ADICIONAR ESTA FUNÇÃO
+    function checkFullTextSearchAvailability() {
+        fetch(OC.generateUrl('/apps/advancedsearch/api/search/info'), {
+            method: 'GET',
+            headers: {
+                'requesttoken': OC.requestToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fullTextSearchAvailable = data.fullTextSearchAvailable;
+                updateSearchModeDisplay();
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar full text search:', error);
+        });
+    }
+
+    // ADICIONAR ESTA FUNÇÃO
+    function updateSearchModeDisplay() {
+        // Adicionar um indicador visual se quiser mostrar o modo de busca
+        const searchBtn = document.getElementById('search-btn');
+        if (searchBtn && fullTextSearchAvailable) {
+            // Opcional: adicionar tooltip ou classe CSS para indicar full text search disponível
+            searchBtn.title = 'Busca avançada com Elasticsearch disponível';
+        }
+    }
+
     function performSearch(page = 1) {
         const filename = document.getElementById('filename').value;
         const tagsInput = document.getElementById('tags').value;
@@ -83,7 +119,8 @@ document.addEventListener('DOMContentLoaded', function () {
             filename: filename,
             tags: tags,
             tagOperator: tagOperator,
-            fileType: fileType
+            fileType: fileType,
+            useFullTextSearch: true // ADICIONAR ESTA LINHA
         };
 
         currentPage = page;
@@ -104,7 +141,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 tagOperator: tagOperator,
                 fileType: fileType,
                 limit: pageSize,
-                offset: offset
+                offset: offset,
+                useFullTextSearch: true // ADICIONAR ESTA LINHA
             })
         })
             .then(response => {

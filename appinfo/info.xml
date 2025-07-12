@@ -21,5 +21,6 @@
     <dependencies>
         <nextcloud min-version="31" max-version="31"/>
         <php min-version="8.1"/>
+        <app>fulltextsearch</app>
     </dependencies>
 </info>

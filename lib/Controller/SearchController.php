@@ -31,6 +31,10 @@ class SearchController extends Controller {
             $fileType = isset($params['fileType']) ? $params['fileType'] : '';
             $limit = isset($params['limit']) ? max(1, min(500, (int)$params['limit'])) : 100;
             $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
+
+            // ADICIONAR ESTA LINHA PARA VERIFICAR SE DEVE USAR FULL TEXT SEARCH
+            $useFullTextSearch = isset($params['useFullTextSearch']) ? (bool)$params['useFullTextSearch'] : true;
+            
             
             // Validar tagOperator
             if (!in_array($tagOperator, ['AND', 'OR'])) {
@@ -42,14 +46,29 @@ class SearchController extends Controller {
                 return !empty(trim($tag));
             });
             
-            $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-            
+            // MODIFICAR ESTA PARTE PARA USAR O NOVO MÉTODO
+            if ($useFullTextSearch && !empty($filename)) {
+                // Usar full text search quando há busca por texto
+                $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            } else {
+                // Usar busca tradicional
+                $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            }
+
+            // ADICIONAR INFORMAÇÃO SOBRE O TIPO DE BUSCA UTILIZADA
+            $searchType = 'traditional';
+            if ($useFullTextSearch && !empty($filename) && $this->searchService->isFullTextSearchAvailable()) {
+                $searchType = 'fulltext';
+            }
+
             return new JSONResponse([
                 'success' => true, 
                 'files' => $results,
                 'count' => count($results),
                 'limit' => $limit,
-                'offset' => $offset
+                'offset' => $offset,
+                'searchType' => $searchType, // ADICIONAR ESTA LINHA
+                'fullTextSearchAvailable' => $this->searchService->isFullTextSearchAvailable() // ADICIONAR ESTA LINHA
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([
@@ -59,8 +78,25 @@ class SearchController extends Controller {
         }
     }
 
+    // ADICIONAR ESTE MÉTODO NOVO
+    #[NoAdminRequired]
+    public function searchInfo() {
+        try {
+            return new JSONResponse([
+                'success' => true,
+                'fullTextSearchAvailable' => $this->searchService->isFullTextSearchAvailable()
+            ]);
+        } catch (\Exception $e) {
+            return new JSONResponse([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     #[NoAdminRequired]
     public function getTags() {
+        // ... código existente permanece igual
         try {
             $allTags = $this->systemTagManager->getAllTags();
             $tagNames = [];
