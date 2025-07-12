@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let totalResults = 0;
     let pageSize = 25;
     let lastSearchParams = null;
-    let fullTextSearchAvailable = false;
+    let fullTextSearchAvailable = true;
     let lastSearchType = 'fulltext';
 
     // Event listeners - apenas adicionar se o elemento existir
