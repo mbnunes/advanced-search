@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-        function performSearch(page = 1) {
+    function performSearch(page = 1) {
         const filename = document.getElementById('filename').value;
         const tagsInput = document.getElementById('tags').value;
         const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Salvar tipo de busca usado e disponibilidade
                     lastSearchType = data.searchType || 'traditional';
                     fullTextSearchAvailable = data.fullTextSearchAvailable || false;
-                    
+
                     console.log('Tipo de data.files:', typeof data.files);
                     console.log('data.files é um array?', Array.isArray(data.files));
                     console.log('Conteúdo de data.files:', data.files);
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
-        function updateSearchInfo(data) {
+    function updateSearchInfo(data) {
         // Atualizar informações sobre o tipo de busca
         if (resultCount) {
             let searchInfo = '';
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
             } else if (data.searchType === 'traditional') {
                 searchInfo = ' (busca tradicional)';
             }
-            
+
             const currentText = resultCount.textContent;
             if (currentText && !currentText.includes('(busca')) {
                 resultCount.textContent = currentText + searchInfo;
@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
         performSearch(page);
     }
 
-        function updatePagination() {
+    function updatePagination() {
         if (!pagination) return;
 
         const totalPages = Math.ceil(totalResults / pageSize);
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pageNumbers) pageNumbers.appendChild(span);
     }
 
-        function clearSearch() {
+    function clearSearch() {
         // Remover o event listener antes de limpar
         if (fileList) {
             fileList.removeEventListener('click', handleFileClick);
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-        function displayListView(files) {
+    function displayListView(files) {
         let html = '';
 
         files.forEach((file) => {
@@ -401,7 +401,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-        function displayGridView(files) {
+    function displayGridView(files) {
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
@@ -467,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.location.href = fileUrl;
             });
 
-                        // Área de thumbnail/ícone
+            // Área de thumbnail/ícone
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
             thumbnailArea.style.cssText = `
@@ -585,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-        function setView(view) {
+    function setView(view) {
         if (view === currentView) return; // Não fazer nada se a visualização não mudou
 
         currentView = view;
@@ -698,13 +698,27 @@ document.addEventListener('DOMContentLoaded', function () {
         return div.innerHTML;
     }
 
-        // Inicialização
+    // Inicialização
     showEmptyContent();
     document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
     document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
 
     setupTagAutocomplete();
 });
+
+// Função separada para lidar com cliques
+function handleFileClick(event) {
+    // Encontrar a linha clicada
+    const row = event.target.closest('.file-row');
+    if (!row) return;
+
+    const fileId = row.getAttribute('data-file-id');
+    const filePath = row.getAttribute('data-file-path');
+    const fileName = row.getAttribute('data-file-name');
+    const mimeType = row.getAttribute('data-mime-type');
+
+    openFile(fileId, filePath, fileName, mimeType);
+}
 
 function setupTagAutocomplete() {
     const tagsInput = document.getElementById('tags');
