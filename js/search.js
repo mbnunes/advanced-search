@@ -129,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.log('Conteúdo de data.files:', data.files);
                     console.log('Tipo de busca usado:', lastSearchType);
                     console.log('Full text search disponível:', fullTextSearchAvailable);
+                    console.log('=== DEBUG INFO ===', data.debug);
 
                     // Para obter o total real, fazer uma busca sem limite
                     getTotalCount(lastSearchParams).then(total => {
