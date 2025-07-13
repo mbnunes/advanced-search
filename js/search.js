@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             hasPreview: true,
                             fileid: file.id,
                         };
-
+                        console.log(fileInfo);
                         OCA.Viewer.open({
                             fileInfo,
                             list: [fileInfo],
