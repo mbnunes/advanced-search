@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (typeof OCA !== 'undefined' && OCA.Viewer) {
                         console.log("teste");
                         const fileInfo = {
-                            path: file.path, 
+                            path: OC.generateUrl(file.path),
                             filename: file.name,
                             basename: file.name,
                             source: OC.generateUrl('/apps/files/api/v1/preview?fileId=' + file.id),
