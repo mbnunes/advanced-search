@@ -415,7 +415,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function displayGridView(files) {
+    async function displayGridView(files) {
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
@@ -426,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
             width: 100%;
         `;
 
+        const viewerModule = await import('/apps/viewer/js/viewer-init.mjs');
 
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
@@ -483,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 e.stopPropagation();
 
-                const viewerModule = await import('/apps/viewer/js/viewer-init.mjs');
+                
                 console.log(viewerModule);
 
                 if ((isImage || isVideo) && viewerModule) {
