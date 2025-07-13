@@ -532,9 +532,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                             // Abrir o viewer
                             OCA.Viewer.open({
-                                path: fullPath,
-                                list: mediaFiles,
-                                canLoop: true
+                                fileInfo: fileInfo,
+                                list: [fileInfo]
+                                // canLoop: true
                             });
                             
                             return;
