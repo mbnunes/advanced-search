@@ -482,23 +482,64 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (isImage || isVideo) {
                     try {
-                        await import('/apps/viewer/js/viewer-init.mjs');
+                        // Verificar se o Viewer já está disponível
+                        if (typeof OCA === 'undefined' || typeof OCA.Viewer === 'undefined') {
+                            // Tentar carregar o viewer
+                            await import('/apps/viewer/js/viewer-main.js');
+                        }
 
                         if (typeof OCA !== 'undefined' && typeof OCA.Viewer?.open === 'function') {
+                            // Garantir que o path esteja completo
+                            const fullPath = file.path.startsWith('/') ? file.path : '/' + file.path;
+                            
+                            // Criar objeto fileInfo mais completo
                             const fileInfo = {
-                                path: file.path, // <-- ESSENCIAL!
-                                mime: file.mimetype,
+                                id: file.id,
                                 name: file.name,
-                                fileid: file.id,
+                                path: fullPath,
+                                dirname: fullPath.substring(0, fullPath.lastIndexOf('/')),
+                                basename: file.name,
+                                mime: file.mimetype,
+                                mimetype: file.mimetype,
+                                size: file.size || 0,
+                                mtime: file.mtime * 1000, // converter para millisegundos
                                 etag: file.etag || String(file.id),
+                                permissions: file.permissions || 'RGDNVW',
                                 hasPreview: true,
+                                isDirectory: false
                             };
 
+                            // Criar lista de arquivos para navegação no viewer
+                            // Idealmente, você deveria passar todos os arquivos de imagem/vídeo da grid
+                            const mediaFiles = files.filter(f => 
+                                f.mimetype?.startsWith('image/') || 
+                                f.mimetype?.startsWith('video/')
+                            ).map(f => ({
+                                id: f.id,
+                                name: f.name,
+                                path: f.path.startsWith('/') ? f.path : '/' + f.path,
+                                dirname: f.path.substring(0, f.path.lastIndexOf('/')),
+                                basename: f.name,
+                                mime: f.mimetype,
+                                mimetype: f.mimetype,
+                                size: f.size || 0,
+                                mtime: f.mtime * 1000,
+                                etag: f.etag || String(f.id),
+                                permissions: f.permissions || 'RGDNVW',
+                                hasPreview: true,
+                                isDirectory: false
+                            }));
+
+                            // Abrir o viewer
                             OCA.Viewer.open({
-                                fileInfo: fileInfo,
-                                list: [fileInfo],
+                                path: fullPath,
+                                list: mediaFiles,
+                                canLoop: true
                             });
+                            
                             return;
+                        } else {
+                            console.warn('OCA.Viewer não está disponível');
                         }
                     } catch (err) {
                         console.error('Erro ao carregar o Viewer:', err);
