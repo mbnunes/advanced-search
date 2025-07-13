@@ -479,29 +479,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
             };
 
-            fileCard.addEventListener('click', (e) => {
-                console.log("teste");
+            fileCard.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                
-                console.log(viewerModule);
+                const isImage = file.mimetype && file.mimetype.startsWith('image/');
+                const isVideo = file.mimetype && file.mimetype.startsWith('video/');
 
-                if ((isImage || isVideo) && viewerModule) {
-                    console.log("VIEWER");
-                    viewerModule.open({
-                        path: file.path, // caminho relativo a /files
-                        mime: file.mimetype,
-                        name: file.name,
-                        dir: '/' + file.path.split('/').slice(0, -1).join('/'), // pasta do arquivo
-                    });
+                if ((isImage || isVideo)) {
+                    await import('/apps/viewer/js/viewer-init.mjs');
+                    if (typeof OC !== 'undefined' && OC.viewer) {
+                        OC.viewer.open({
+                            path: file.path,
+                            mime: file.mimetype,
+                            name: file.name,
+                            dir: '/' + file.path.split('/').slice(0, -1).join('/'),
+                        });
+                    } else {
+                        console.error('OC.viewer não está disponível após importar o módulo');
+                    }
                 } else {
-                    // fallback para outros tipos de arquivos
-                    console.log("SEM VIEWER");
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
                     window.location.href = fileUrl;
                 }
             });
+
 
             // Área de thumbnail/ícone
             const thumbnailArea = document.createElement('div');
