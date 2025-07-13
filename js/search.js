@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         await import('/apps/viewer/js/viewer-init.mjs');
-        
+
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
             const isVideo = file.mimetype && file.mimetype.startsWith('video/');
@@ -480,13 +480,12 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             fileCard.addEventListener('click', (e) => {
-                console.log("teste");
                 e.preventDefault();
                 e.stopPropagation();
 
                 if ((isImage || isVideo)) {
-                    
-                    if (typeof OC !== 'undefined' && OCA.Viewer) {
+                    console.log("teste");
+                    if (typeof OCA !== 'undefined' && OCA.Viewer) {
                         OCA.Viewer.open({
                             path: file.path,
                             mime: file.mimetype,
