@@ -5,6 +5,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IRequest;
 use OCP\Util;
 
