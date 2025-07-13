@@ -484,7 +484,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if ((isImage || isVideo)) {
-                    if (typeof OCA !== 'undefined' && OCA.Viewer?.open) {
+                    if (typeof OCA !== 'undefined' && OCA.Viewer) {
+                        console.log("teste");
                         const fileInfo = {
                             filename: file.name,
                             basename: file.name,
@@ -494,13 +495,13 @@ document.addEventListener('DOMContentLoaded', function () {
                             hasPreview: true,
                             fileid: file.id,
                         };
-                        console.log(fileInfo);
+
                         OCA.Viewer.open({
                             fileInfo,
                             list: [fileInfo],
                         });
                     } else {
-                        console.error('OCA.Viewer.open não encontrado após import');
+                        console.error('OC.viewer não está disponível após importar o módulo');
                     }
                 } else {
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
