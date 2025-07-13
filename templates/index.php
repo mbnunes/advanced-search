@@ -67,54 +67,56 @@ style('advancedsearch', 'style');
     <div id="app-content">
         <div id="app-content-wrapper">
             <div class="files-controls">
-                <div class="breadcrumb">
-                    <div class="crumb svg canDrop">
-                        <a href="#" class="icon-home"></a>
-                        <span><?php p($l->t('Search Results')); ?></span>
-                    </div>
-                </div>
-                
-                <!-- Botões de alternância de visualização -->
-                <div class="view-controls">
-                    <div class="view-buttons">
-                        <button id="view-list" class="view-button" title="<?php p($l->t('List view')); ?>">
-                            <span class="icon-list"></span>
-                            <span class="button-text"><?php p($l->t('List')); ?></span>
-                        </button>
-                        <button id="view-grid" class="view-button active" title="<?php p($l->t('Grid view')); ?>">
-                            <span class="icon-toggle-pictures"></span>
-                            <span class="button-text"><?php p($l->t('Grid')); ?></span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Paginação adicionada aqui -->
-                <div class="pagination-wrapper hidden" id="pagination">
-                    <div class="pagination-info">
-                        <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
+                <div class="files-controls-inner">
+                    <div class="breadcrumb">
+                        <div class="crumb svg canDrop">
+                            <a href="#" class="icon-home"></a>
+                            <span><?php p($l->t('Search Results')); ?></span>
+                        </div>
                     </div>
                     
-                    <div class="pagination-controls">
-                        <div class="pagination-buttons">
-                            <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">«</button>
-                            <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">‹</button>
-                            
-                            <div id="page-numbers" style="display: inline-flex;">
-                                <!-- Números das páginas serão inseridos aqui -->
-                            </div>
-                            
-                            <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">›</button>
-                            <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">»</button>
+                    <!-- Botões de alternância de visualização -->
+                    <div class="view-controls">
+                        <div class="view-buttons">
+                            <button id="view-list" class="view-button" title="<?php p($l->t('List view')); ?>">
+                                <span class="icon-list"></span>
+                                <span class="button-text"><?php p($l->t('List')); ?></span>
+                            </button>
+                            <button id="view-grid" class="view-button active" title="<?php p($l->t('Grid view')); ?>">
+                                <span class="icon-toggle-pictures"></span>
+                                <span class="button-text"><?php p($l->t('Grid')); ?></span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Paginação adicionada aqui -->
+                    <div class="pagination-wrapper hidden" id="pagination">
+                        <div class="pagination-info">
+                            <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
                         </div>
                         
-                        <div class="page-size-selector">
-                            <label for="page-size"><?php p($l->t('Items per page')); ?>:</label>
-                            <select id="page-size">
-                                <option value="10">10</option>
-                                <option value="25" selected>25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
+                        <div class="pagination-controls">
+                            <div class="pagination-buttons">
+                                <button class="pagination-button" id="first-page" title="<?php p($l->t('First page')); ?>">«</button>
+                                <button class="pagination-button" id="prev-page" title="<?php p($l->t('Previous page')); ?>">‹</button>
+                                
+                                <div id="page-numbers" style="display: inline-flex;">
+                                    <!-- Números das páginas serão inseridos aqui -->
+                                </div>
+                                
+                                <button class="pagination-button" id="next-page" title="<?php p($l->t('Next page')); ?>">›</button>
+                                <button class="pagination-button" id="last-page" title="<?php p($l->t('Last page')); ?>">»</button>
+                            </div>
+                            
+                            <div class="page-size-selector">
+                                <label for="page-size"><?php p($l->t('Items por pág')); ?>:</label>
+                                <select id="page-size">
+                                    <option value="10">10</option>
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
