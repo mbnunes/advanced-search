@@ -419,12 +419,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
-        padding: 16px;
-        width: 100%;
-    `;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 16px;
+            width: 100%;
+        `;
 
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
@@ -434,17 +434,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
             fileCard.style.cssText = `
-            background: var(--color-background-hover);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            position: relative;
-        `;
+                background: var(--color-background-hover);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                transition: transform 0.2s, box-shadow 0.2s;
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                position: relative;
+            `;
 
             // Adicionar indicador de busca avançada
             if (file.searchType === 'fulltext' && file.score) {
@@ -453,16 +453,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 scoreIndicator.innerHTML = '⭐';
                 scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
                 scoreIndicator.style.cssText = `
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                background: rgba(0,0,0,0.7);
-                color: white;
-                padding: 4px;
-                border-radius: 4px;
-                font-size: 12px;
-                z-index: 1;
-            `;
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: rgba(0,0,0,0.7);
+                    color: white;
+                    padding: 4px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1;
+                `;
                 fileCard.appendChild(scoreIndicator);
             }
 
@@ -485,13 +485,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
             thumbnailArea.style.cssText = `
-            height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-background-dark);
-            position: relative;
-        `;
+                height: 150px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--color-background-dark);
+                position: relative;
+            `;
 
             // Adicionar thumbnail ou ícone
             if (hasThumbnail) {
@@ -523,50 +523,59 @@ document.addEventListener('DOMContentLoaded', function () {
             fileName.className = 'file-name';
             fileName.textContent = file.name;
             fileName.style.cssText = `
-            font-weight: bold;
-            margin-bottom: 8px;
-            word-break: break-word;
-            white-space: normal;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        `;
+                font-weight: bold;
+                margin-bottom: 8px;
+                word-break: break-word;
+                white-space: normal;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            `;
 
             // Data de modificação
             const fileDate = document.createElement('div');
             fileDate.className = 'file-date';
             fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
             fileDate.style.cssText = `
-            font-size: 12px;
-            color: var(--color-text-lighter);
-            margin-bottom: 8px;
-        `;
+                font-size: 12px;
+                color: var(--color-text-lighter);
+                margin-bottom: 8px;
+            `;
 
             // Tags
             const fileTags = document.createElement('div');
             fileTags.className = 'file-tags';
             fileTags.style.cssText = `
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: auto;
-        `;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: auto;
+            `;
 
             if (file.tags && file.tags.length > 0) {
                 file.tags.forEach(tag => {
+                    const tagLink = document.createElement('a');
+                    tagLink.href = OC.generateUrl('/apps/files/tags/'+tag.id+'?dir=/'+tag.id);
+                    tagLink.style.textDecoration = 'none'; // opcional, remove sublinhado do link
+                    tagLink.target = '_blank'; // opcional, abre em nova aba
+
                     const tagElement = document.createElement('span');
                     tagElement.className = 'tag';
                     tagElement.textContent = tag.name;
                     tagElement.style.cssText = `
-                    background: green;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-size: 11px;
-                `;
-                    fileTags.appendChild(tagElement);
+                        background: green;
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        margin-right: 4px;
+                    `;
+
+                    tagLink.appendChild(tagElement);
+                    fileTags.appendChild(tagLink);
                 });
+
             } else {
                 const noTags = document.createElement('span');
                 noTags.textContent = 'Nenhuma tag';
