@@ -162,11 +162,12 @@
 .files-controls-inner {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: center; /* Alinha verticalmente */
     gap: 20px;
-    flex-wrap: wrap;
     width: 100%;
+    flex-wrap: nowrap; /* evita quebra de linha */
 }
+
 
 .files-controls-inner > .breadcrumb,
 .files-controls-inner > .view-controls,
@@ -200,9 +201,12 @@
 
 
 .breadcrumb {
-    display: flex;
-    align-items: center;
+    max-width: 25%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 
 .crumb {
     display: flex;
@@ -361,28 +365,30 @@
     display: none !important;
 }
 
-/* Paginação */
 .pagination-wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-main-background);
-    margin-top: auto;
-    /* Empurra para o fundo */
+    align-items: center; /* Alinha os itens no centro verticalmente */
+    gap: 15px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    margin: 0;
+    height: auto;
 }
 
-.pagination-info {
-    color: var(--color-text-light);
-    font-size: 14px;
-}
 
 .pagination-controls {
     display: flex;
     align-items: center;
     gap: 10px;
 }
+
+.pagination-info {
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--color-text);
+}
+
 
 .pagination-buttons {
     display: flex;
