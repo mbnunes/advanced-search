@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         // Opção 2: Com file e path
                         OCA.Viewer.open({ 
-                            file: {
+                            fileInfo: {
                                 path: file.path,
                                 mime: file.mimetype,
                                 fileid: file.id
