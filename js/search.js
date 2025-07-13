@@ -429,9 +429,9 @@ document.addEventListener('DOMContentLoaded', function () {
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
             const isVideo = file.mimetype && file.mimetype.startsWith('video/');
+            console.log(isVideo);
+            console.log(isImage);
             const hasThumbnail = isImage || isVideo;
-
-            console.log(hasThumbnail);
 
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
