@@ -419,123 +419,120 @@ document.addEventListener('DOMContentLoaded', function () {
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-            padding: 16px;
-            width: 100%;
-        `;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        padding: 16px;
+        width: 100%;
+    `;
 
-        await import('/apps/viewer/js/viewer-init.mjs');
-
-        files.forEach(file => {
-            const isImage = file.mimetype && file.mimetype.startsWith('image/');
-            const isVideo = file.mimetype && file.mimetype.startsWith('video/');
-
+        for (const file of files) {
+            const isImage = file.mimetype?.startsWith('image/');
+            const isVideo = file.mimetype?.startsWith('video/');
             const hasThumbnail = isImage || isVideo;
 
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
             fileCard.style.cssText = `
-                background: var(--color-background-hover);
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                transition: transform 0.2s, box-shadow 0.2s;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                position: relative;
-            `;
+            background: var(--color-background-hover);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+        `;
 
-            // Adicionar indicador de busca avançada
+            // Indicador de relevância
             if (file.searchType === 'fulltext' && file.score) {
                 const scoreIndicator = document.createElement('div');
                 scoreIndicator.className = 'score-indicator';
                 scoreIndicator.innerHTML = '⭐';
                 scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
                 scoreIndicator.style.cssText = `
-                    position: absolute;
-                    top: 8px;
-                    right: 8px;
-                    background: rgba(0,0,0,0.7);
-                    color: white;
-                    padding: 4px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    z-index: 1;
-                `;
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: rgba(0,0,0,0.7);
+                color: white;
+                padding: 4px;
+                border-radius: 4px;
+                font-size: 12px;
+                z-index: 1;
+            `;
                 fileCard.appendChild(scoreIndicator);
             }
 
-            fileCard.onmouseover = () => {
+            fileCard.addEventListener('mouseover', () => {
                 fileCard.style.transform = 'translateY(-2px)';
                 fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-            };
+            });
 
-            fileCard.onmouseout = () => {
+            fileCard.addEventListener('mouseout', () => {
                 fileCard.style.transform = 'translateY(0)';
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-            };
+            });
 
-            fileCard.addEventListener('click', (e) => {
+            fileCard.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                if ((isImage || isVideo)) {
-                    if (typeof OCA !== 'undefined' && OCA.Viewer) {
-                        console.log("teste");
-                        const fileInfo = {
-                            path: file.path,
-                            basename: file.name,
-                            mime: file.mimetype,
-                            etag: file.etag || String(file.id),
-                            hasPreview: true,
-                            fileid: file.id,
-                        };
-                        console.log(fileInfo);
-                        OCA.Viewer.open({
-                            fileInfo,
-                            list: [fileInfo],
-                        });
-                    } else {
-                        console.error('OC.viewer não está disponível após importar o módulo');
+                if (isImage || isVideo) {
+                    try {
+                        await import('/apps/viewer/js/viewer-init.mjs');
+
+                        if (typeof OCA !== 'undefined' && typeof OCA.Viewer?.open === 'function') {
+                            const fileInfo = {
+                                path: file.path, // <-- ESSENCIAL!
+                                mime: file.mimetype,
+                                name: file.name,
+                                fileid: file.id,
+                                etag: file.etag || String(file.id),
+                                hasPreview: true,
+                            };
+
+                            OCA.Viewer.open({
+                                fileInfo: fileInfo,
+                                list: [fileInfo],
+                            });
+                            return;
+                        }
+                    } catch (err) {
+                        console.error('Erro ao carregar o Viewer:', err);
                     }
-                } else {
-                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                    window.location.href = fileUrl;
                 }
+
+                // Fallback se não for imagem/vídeo ou viewer indisponível
+                const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                window.open(fileUrl, '_blank');
             });
 
-            // Área de thumbnail/ícone
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
             thumbnailArea.style.cssText = `
-                height: 150px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: var(--color-background-dark);
-                position: relative;
-            `;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-background-dark);
+            position: relative;
+        `;
 
-            // Adicionar thumbnail ou ícone
             if (hasThumbnail) {
-                // Para imagens e vídeos, tentar carregar thumbnail
                 const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
                 thumbnailArea.style.backgroundImage = `url('${thumbnailUrl}')`;
                 thumbnailArea.style.backgroundSize = 'cover';
                 thumbnailArea.style.backgroundPosition = 'center';
             } else {
-                // Para outros tipos de arquivo, usar ícone
                 const fileIcon = document.createElement('div');
                 fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
                 fileIcon.style.fontSize = '48px';
                 thumbnailArea.appendChild(fileIcon);
             }
 
-            // Área de informações do arquivo
             const infoArea = document.createElement('div');
             infoArea.className = 'info-area';
             infoArea.style.cssText = `
@@ -545,69 +542,61 @@ document.addEventListener('DOMContentLoaded', function () {
             flex-direction: column;
         `;
 
-            // Nome do arquivo
             const fileName = document.createElement('div');
             fileName.className = 'file-name';
             fileName.textContent = file.name;
             fileName.style.cssText = `
-                font-weight: bold;
-                margin-bottom: 8px;
-                word-break: break-word;
-                white-space: normal;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            `;
+            font-weight: bold;
+            margin-bottom: 8px;
+            word-break: break-word;
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        `;
 
-            // Data de modificação
             const fileDate = document.createElement('div');
             fileDate.className = 'file-date';
             fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
             fileDate.style.cssText = `
-                font-size: 12px;
-                color: var(--color-text-lighter);
-                margin-bottom: 8px;
-            `;
+            font-size: 12px;
+            color: var(--color-text-lighter);
+            margin-bottom: 8px;
+        `;
 
-            // Tags
             const fileTags = document.createElement('div');
             fileTags.className = 'file-tags';
             fileTags.style.cssText = `
-                display: flex;
-                flex-wrap: wrap;
-                gap: 4px;
-                margin-top: auto;
-            `;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: auto;
+        `;
 
             if (file.tags && file.tags.length > 0) {
                 file.tags.forEach(tag => {
                     const tagLink = document.createElement('a');
-                    tagLink.href = OC.generateUrl('/apps/files/tags/'+tag.id+'?dir=/'+tag.id);
-                    tagLink.style.textDecoration = 'none'; // opcional, remove sublinhado do link
-                    tagLink.target = '_blank'; // opcional, abre em nova aba
-
-                    // Impede que o clique no link afete outros comportamentos do Nextcloud
-                    tagLink.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                    });
+                    tagLink.href = OC.generateUrl('/apps/files/tags/' + tag.id + '?dir=/' + tag.id);
+                    tagLink.style.textDecoration = 'none';
+                    tagLink.target = '_blank';
+                    tagLink.addEventListener('click', (event) => event.stopPropagation());
 
                     const tagElement = document.createElement('span');
                     tagElement.className = 'tag';
                     tagElement.textContent = tag.name;
                     tagElement.style.cssText = `
-                        background: green;
-                        color: white;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        font-size: 11px;
-                        margin-right: 4px;
-                    `;
+                    background: green;
+                    color: white;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    margin-right: 4px;
+                `;
 
                     tagLink.appendChild(tagElement);
                     fileTags.appendChild(tagLink);
                 });
-
             } else {
                 const noTags = document.createElement('span');
                 noTags.textContent = 'Nenhuma tag';
@@ -618,7 +607,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileTags.appendChild(noTags);
             }
 
-            // Adicionar elementos à estrutura
             infoArea.appendChild(fileName);
             infoArea.appendChild(fileDate);
             infoArea.appendChild(fileTags);
@@ -627,18 +615,17 @@ document.addEventListener('DOMContentLoaded', function () {
             fileCard.appendChild(infoArea);
 
             gridContainer.appendChild(fileCard);
-        });
+        }
 
-        // Limpar fileList e adicionar o grid
         fileList.innerHTML = '';
         fileList.appendChild(gridContainer);
 
-        // Atualizar classes do fileTable
         if (fileTable) {
             fileTable.classList.remove('list-view');
             fileTable.classList.add('grid-view');
         }
     }
+
 
     function setView(view) {
         if (view === currentView) return; // Não fazer nada se a visualização não mudou
