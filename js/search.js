@@ -482,48 +482,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (isImage || isVideo) {
                     try {
-                        // Verificar se o Viewer já está disponível
-                        if (typeof OCA === 'undefined' || typeof OCA.Viewer === 'undefined') {
-                            // Tentar carregar o viewer
-                            await import('/apps/viewer/js/viewer-main.js');
-                        }
-
-                        if (typeof OCA !== 'undefined' && typeof OCA.Viewer?.open === 'function') {
-                            // Garantir que o path esteja completo
-                            const fullPath = file.path.startsWith('/') ? file.path : '/' + file.path;
+                        if (window.OCA?.Viewer?.open) {
+                            // Gerar a URL completa do arquivo
+                            const davPath = file.path.replace(/^\/[^\/]+\/files/, ''); // Remove /admin/files
+                            const fileUrl = OC.generateUrl('/remote.php/dav/files/' + OC.getCurrentUser().uid + davPath);
                             
-                            // Criar objeto fileInfo mais completo
-                            const fileInfo = {
-                                id: file.id,
-                                name: file.name,
-                                path: fullPath,
-                                dirname: fullPath.substring(0, fullPath.lastIndexOf('/')),
-                                basename: file.name,
+                            // Formato correto para NC31
+                            const fileObject = {
+                                fileid: file.id,
+                                filename: file.name,
                                 mime: file.mimetype,
                                 mimetype: file.mimetype,
-                                size: file.size || 0,
-                                mtime: file.mtime * 1000, // converter para millisegundos
-                                etag: file.etag || String(file.id),
-                                permissions: file.permissions || 'RGDNVW',
                                 hasPreview: true,
-                                isDirectory: false
+                                // IMPORTANTE: incluir a URL
+                                url: fileUrl,
+                                // ou alternativamente usar source
+                                source: fileUrl,
+                                path: file.path
                             };
-                            console.log(fileInfo);
+
                             // Abrir o viewer
-                            OCA.Viewer.open({
-                                fileInfo: fileInfo,
-                                list: [fileInfo]
-                                // canLoop: true
+                            window.OCA.Viewer.open({ 
+                                file: fileObject 
                             });
                             
-                        } else {
-                            console.warn('OCA.Viewer não está disponível');
+                            return;
                         }
                     } catch (err) {
-                        console.error('Erro ao carregar o Viewer:', err);
+                        console.error('Erro ao abrir viewer:', err);
                     }
-                }else{
-                    // Fallback se não for imagem/vídeo ou viewer indisponível
+                }else {
+                    // Fallback
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
                     window.open(fileUrl, '_blank');
                 }
