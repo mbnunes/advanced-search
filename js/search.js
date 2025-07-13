@@ -426,8 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
             width: 100%;
         `;
 
-        const viewerModule = await import('/apps/viewer/js/viewer-init.mjs');
-
+        await import('/apps/viewer/js/viewer-init.mjs');
+        
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
             const isVideo = file.mimetype && file.mimetype.startsWith('video/');
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if ((isImage || isVideo)) {
-                    await import('/apps/viewer/js/viewer-init.mjs');
+                    
                     if (typeof OC !== 'undefined' && OCA.Viewer) {
                         OCA.Viewer.open({
                             path: file.path,
