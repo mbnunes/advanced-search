@@ -483,11 +483,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 e.stopPropagation();
 
-                console.log(OC.viewer);
+                const viewerModule = await import('/apps/viewer/js/viewer-init.mjs');
+                console.log(viewerModule);
 
-                if ((isImage || isVideo) && OC.viewer) {
+                if ((isImage || isVideo) && viewerModule) {
                     console.log("VIEWER");
-                    OC.viewer.open({
+                    viewerModule.open({
                         path: file.path, // caminho relativo a /files
                         mime: file.mimetype,
                         name: file.name,
