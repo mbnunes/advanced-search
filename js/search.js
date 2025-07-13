@@ -477,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             fileCard.addEventListener('click', (e) => {
+                console.log("teste");
                 e.preventDefault();
                 e.stopPropagation();
 
