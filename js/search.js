@@ -426,14 +426,6 @@ document.addEventListener('DOMContentLoaded', function () {
             width: 100%;
         `;
 
-        OC.AppConfig.loadApp('viewer').then(() => {
-            // Agora você pode usar OC.viewer com segurança
-            console.log('Viewer carregado:', typeof OC.viewer);
-
-            // Ex: abrir manualmente um arquivo
-            // OC.viewer.open({ path: 'Fotos/teste.jpg', mime: 'image/jpeg', name: 'teste.jpg', dir: '/Fotos' });
-        });
-
 
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');

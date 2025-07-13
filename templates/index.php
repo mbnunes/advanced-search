@@ -1,5 +1,5 @@
 <?php
-script('viewer', 'viewer'); 
+script('viewer', 'viewer-init'); 
 script('advancedsearch', 'search');
 style('advancedsearch', 'style');
 ?>
