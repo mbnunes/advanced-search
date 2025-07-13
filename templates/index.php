@@ -1,5 +1,6 @@
 <?php
-script('viewer', 'viewer-init'); 
+script('viewer', 'viewer-init');    // Inicializa o viewer
+style('viewer', 'style');  
 script('advancedsearch', 'search');
 style('advancedsearch', 'style');
 ?>
