@@ -484,20 +484,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if ((isImage || isVideo)) {
-                    if (typeof OCA !== 'undefined' && OCA.Viewer) {
-                        console.log("teste");
-                        console.log(file.path);
-                        console.log(file.mimetype);
-                        console.log(file.name);
-                        console.log('/' + file.path.split('/').slice(0, -1).join('/'));
-                        OCA.Viewer.open({
-                            path: file.path,
+                    if (typeof OCA !== 'undefined' && OCA.Viewer?.open) {
+                        const fileInfo = {
+                            filename: file.name,
+                            basename: file.name,
+                            source: OC.generateUrl('/apps/files/api/v1/preview?fileId=' + file.id),
                             mime: file.mimetype,
-                            name: file.name,
-                            dir: '/' + file.path.split('/').slice(0, -1).join('/'),
+                            etag: file.etag || String(file.id),
+                            hasPreview: true,
+                            fileid: file.id,
+                        };
+
+                        OCA.Viewer.open({
+                            fileInfo,
+                            list: [fileInfo],
                         });
                     } else {
-                        console.error('OC.viewer não está disponível após importar o módulo');
+                        console.error('OCA.Viewer.open não encontrado após import');
                     }
                 } else {
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
