@@ -481,6 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if ((isImage || isVideo) && OC.viewer) {
+                    console.log("VIEWER");
                     OC.viewer.open({
                         path: file.path, // caminho relativo a /files
                         mime: file.mimetype,
@@ -489,6 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 } else {
                     // fallback para outros tipos de arquivos
+                    console.log("SEM VIEWER");
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
                     window.location.href = fileUrl;
                 }
