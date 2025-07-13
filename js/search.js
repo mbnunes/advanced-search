@@ -484,8 +484,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if ((isImage || isVideo)) {
-                    console.log("teste");
                     if (typeof OCA !== 'undefined' && OCA.Viewer) {
+                        console.log("teste");
+                        console.log(file.path);
+                        console.log(file.mimetype);
+                        console.log(file.name);
+                        console.log('/' + file.path.split('/').slice(0, -1).join('/'));
                         OCA.Viewer.open({
                             path: file.path,
                             mime: file.mimetype,
