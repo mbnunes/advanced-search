@@ -522,11 +522,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     } catch (err) {
                         console.error('Erro ao carregar o Viewer:', err);
                     }
+                }else{
+                    // Fallback se não for imagem/vídeo ou viewer indisponível
+                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                    window.open(fileUrl, '_blank');
                 }
 
-                // Fallback se não for imagem/vídeo ou viewer indisponível
-                const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                window.open(fileUrl, '_blank');
+                
             });
 
             const thumbnailArea = document.createElement('div');
