@@ -560,6 +560,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     tagLink.style.textDecoration = 'none'; // opcional, remove sublinhado do link
                     tagLink.target = '_blank'; // opcional, abre em nova aba
 
+                    // Impede que o clique no link afete outros comportamentos do Nextcloud
+                    tagLink.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                    });
+
                     const tagElement = document.createElement('span');
                     tagElement.className = 'tag';
                     tagElement.textContent = tag.name;
