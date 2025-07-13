@@ -488,8 +488,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if ((isImage || isVideo)) {
                     await import('/apps/viewer/js/viewer-init.mjs');
-                    if (typeof OC !== 'undefined' && OC.viewer) {
-                        OC.viewer.open({
+                    if (typeof OC !== 'undefined' && OCA.Viewer) {
+                        OCA.Viewer.open({
                             path: file.path,
                             mime: file.mimetype,
                             name: file.name,
