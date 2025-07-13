@@ -499,8 +499,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error('OC.viewer não está disponível após importar o módulo');
                     }
                 } else {
-                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                    window.location.href = fileUrl;
+                    const fileUrl = OC.generateUrl('/apps/file/filess/'+file.id+'?dir=' + file.path+'&openfile=true');
+                    window.open(fileUrl, '_blank');
                 }
             });
 
