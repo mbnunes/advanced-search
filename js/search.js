@@ -431,6 +431,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const isVideo = file.mimetype && file.mimetype.startsWith('video/');
             const hasThumbnail = isImage || isVideo;
 
+            console.log(hasThumbnail);
+
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
             fileCard.style.cssText = `
