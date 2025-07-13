@@ -1,6 +1,7 @@
 <?php
 namespace OCA\AdvancedSearch\Controller;
 
+use OCA\Viewer\Event\LoadViewer;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
