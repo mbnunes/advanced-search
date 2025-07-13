@@ -22,6 +22,8 @@
         <nextcloud min-version="31" max-version="31"/>
         <php min-version="8.1"/>
         <app>fulltextsearch</app>
-            <app>viewer</app>
+        <app>fulltextsearch_elasticsearch</app> <!-- Se estiver usando Elasticsearch -->
+        <app>viewer</app>
+            <app>systemtags</app>
     </dependencies>
 </info>
