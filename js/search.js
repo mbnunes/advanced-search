@@ -479,12 +479,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
             };
 
-            fileCard.addEventListener('click', async (e) => {
+            fileCard.addEventListener('click', (e) => {
+                console.log("teste");
                 e.preventDefault();
                 e.stopPropagation();
-
-                const isImage = file.mimetype && file.mimetype.startsWith('image/');
-                const isVideo = file.mimetype && file.mimetype.startsWith('video/');
 
                 if ((isImage || isVideo)) {
                     await import('/apps/viewer/js/viewer-init.mjs');
@@ -499,11 +497,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         console.error('OC.viewer não está disponível após importar o módulo');
                     }
                 } else {
-                    const fileUrl = OC.generateUrl('/apps/file/filess/'+file.id+'?dir=' + file.path+'&openfile=true');
-                    window.open(fileUrl, '_blank');
+                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                    window.location.href = fileUrl;
                 }
             });
-
 
             // Área de thumbnail/ícone
             const thumbnailArea = document.createElement('div');
