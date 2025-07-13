@@ -10,14 +10,22 @@ use OCP\Util;
 
 class PageController extends Controller {
     
-    public function __construct($AppName, IRequest $request) {
-        parent::__construct($AppName, $request);
-    }
+    protected $appName;
+   private $eventDispatcher;
+   public function __construct($appName,
+								IRequest $request,
+								IEventDispatcher $eventDispatcher) {
+		parent::__construct($appName, $request);
+
+		$this->appName = $appName;
+		$this->eventDispatcher = $eventDispatcher;
+	}
 
     #[NoAdminRequired]
     #[NoCSRFRequired]
     public function index() {
         // Adicionar scripts e estilos
+        $this->eventDispatcher->dispatch(LoadViewer::class, new LoadViewer());
         Util::addScript('advancedsearch', 'search');
         Util::addStyle('advancedsearch', 'style');
         
