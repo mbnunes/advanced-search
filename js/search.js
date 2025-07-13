@@ -482,32 +482,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (isImage || isVideo) {
                     try {
-                        if (window.OCA?.Viewer?.open) {
-                            // Gerar a URL completa do arquivo
-                            const davPath = file.path.replace(/^\/[^\/]+\/files/, ''); // Remove /admin/files
-                            const fileUrl = OC.generateUrl('/remote.php/dav/files/' + OC.getCurrentUser().uid + davPath);
-                            
-                            // Formato correto para NC31
-                            const fileObject = {
-                                fileid: file.id,
-                                filename: file.name,
-                                mime: file.mimetype,
-                                mimetype: file.mimetype,
-                                hasPreview: true,
-                                // IMPORTANTE: incluir a URL
-                                url: fileUrl,
-                                // ou alternativamente usar source
-                                source: fileUrl,
-                                path: file.path
-                            };
+                        const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
+                        OCA.Viewer.open({ path: cleanPath });
 
-                            // Abrir o viewer
-                            window.OCA.Viewer.open({ 
-                                file: fileObject 
-                            });
-                            
-                            return;
-                        }
+                        // Opção 2: Com file e path
+                        OCA.Viewer.open({ 
+                            file: {
+                                path: file.path,
+                                mime: file.mimetype,
+                                fileid: file.id
+                            }
+                        });
                     } catch (err) {
                         console.error('Erro ao abrir viewer:', err);
                     }
