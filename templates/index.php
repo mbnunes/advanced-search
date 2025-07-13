@@ -107,7 +107,7 @@ style('advancedsearch', 'style');
                     </div>
 
                     <!-- Botões de alternância de visualização -->
-                    <div class="view-controls">
+                    <!-- <div class="view-controls">
                         <div class="view-buttons">
                             <button id="view-list" class="view-button" title="<?php p($l->t('List view')); ?>">
                                 <span class="icon-list"></span>
@@ -118,7 +118,7 @@ style('advancedsearch', 'style');
                                 <span class="button-text"><?php p($l->t('Grid')); ?></span>
                             </button>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
             

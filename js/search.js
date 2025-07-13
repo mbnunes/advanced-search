@@ -476,9 +476,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
             };
 
-            fileCard.addEventListener('click', () => {
-                const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                window.location.href = fileUrl;
+            fileCard.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if ((isImage || isVideo) && OC.viewer) {
+                    OC.viewer.open({
+                        path: file.path, // caminho relativo a /files
+                        mime: file.mimetype,
+                        name: file.name,
+                        dir: '/' + file.path.split('/').slice(0, -1).join('/'), // pasta do arquivo
+                    });
+                } else {
+                    // fallback para outros tipos de arquivos
+                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+                    window.location.href = fileUrl;
+                }
             });
 
             // Área de thumbnail/ícone
@@ -841,3 +854,4 @@ function setupAutocomplete(input, tags) {
         }
     });
 }
+
