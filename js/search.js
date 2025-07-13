@@ -429,8 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
         files.forEach(file => {
             const isImage = file.mimetype && file.mimetype.startsWith('image/');
             const isVideo = file.mimetype && file.mimetype.startsWith('video/');
-            console.log(isVideo);
-            console.log(isImage);
+
             const hasThumbnail = isImage || isVideo;
 
             const fileCard = document.createElement('div');
@@ -482,6 +481,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log("teste");
                 e.preventDefault();
                 e.stopPropagation();
+
+                console.log(OC.viewer);
 
                 if ((isImage || isVideo) && OC.viewer) {
                     console.log("VIEWER");
