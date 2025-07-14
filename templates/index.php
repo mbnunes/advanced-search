@@ -3,6 +3,7 @@ script('viewer', 'viewer-init');    // Inicializa o viewer
 style('viewer', 'style');  
 script('advancedsearch', 'search');
 style('advancedsearch', 'style');
+// $l = \OC::$server->getL10N('advancedsearch'); // substitua pelo ID do seu app
 ?>
 
 <div id="app">
