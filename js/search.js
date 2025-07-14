@@ -1,15 +1,5 @@
-import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 
 document.addEventListener('DOMContentLoaded', function () {
-
-    const t = function(text) {
-        return window.t ? window.t('advancedsearch', text) : text;
-    };
-    
-    const n = function(singular, plural, count) {
-        return window.n ? window.n('advancedsearch', singular, plural, count) : 
-               (count === 1 ? singular : plural);
-    };
 
     // Elementos principais
     const searchBtn = document.getElementById('search-btn');

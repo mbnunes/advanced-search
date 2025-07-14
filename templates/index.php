@@ -1,7 +1,4 @@
 <?php
-// No início do arquivo, adicionar:
-// \OC::$server->getL10NFactory()->get('advancedsearch')->getLanguageCode();
-// script('advancedsearch', 'l10n/' . \OC::$server->getL10NFactory()->findLanguage('advancedsearch'));
 script('viewer', 'viewer-init');    // Inicializa o viewer
 style('viewer', 'style');  
 script('advancedsearch', 'search');
