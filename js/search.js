@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+    OC.L10N.load('advancedsearch', OC.getRootPath() + '/apps/advancedsearch/l10n/', 'pt_BR');
+
     // Elementos principais
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
