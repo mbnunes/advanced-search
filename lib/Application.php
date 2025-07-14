@@ -2,6 +2,7 @@
 namespace OCA\AdvancedSearch;
 
 use OCP\AppFramework\App;
+use OCP\IL10N;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
@@ -16,6 +17,11 @@ class Application extends App implements IBootstrap {
     }
 
     public function register(IRegistrationContext $context): void {
+
+        $context->registerService(IL10N::class, function($c) {
+            return $c->getServerContainer()->getL10N(self::APP_ID);
+        });
+        
         // Registrar serviços se necessário
         $context->registerService(SearchService::class, function($c) {
             $server = $c->getServerContainer();

@@ -26,8 +26,7 @@
         <app>viewer</app>
             <app>systemtags</app>
     </dependencies>
-    <settings>
-        <!-- <l10n>l10n</l10n> -->
-    </settings>
+        <use-l10n>true</use-l10n>
+
 
 </info>
