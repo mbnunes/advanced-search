@@ -27,7 +27,7 @@
             <app>systemtags</app>
     </dependencies>
     <settings>
-        <l10n>l10n</l10n>
+        <!-- <l10n>l10n</l10n> -->
     </settings>
 
 </info>
