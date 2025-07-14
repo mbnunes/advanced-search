@@ -1,7 +1,13 @@
 {
-    "Search": "Buscar",
-    "Clear": "Limpar",
-    "Advanced Search": "Busca Avançada",
-    "No results found": "Nenhum resultado encontrado",
-    "Try adjusting your search criteria": "Tente ajustar seus critérios de busca"
+  "0-0 of 0 results": "0-0 de 0 resultados",
+  "Itens": "Itens",
+  "First page": "Primeira página",
+  "Previous page": "Página anterior",
+  "Next page": "Próxima página",
+  "Last page": "Última página",
+  "Searching...": "Buscando...",
+  "Name": "Nome",
+  "Size": "Tamanho",
+  "Modified": "Modificado",
+  "Tags": "Tags"
 }

@@ -1,7 +1,13 @@
 {
-    "Search": "Search",
-    "Clear": "Clear",
-    "Advanced Search": "Advanced Search",
-    "No results found": "No results found",
-    "Try adjusting your search criteria": "Try adjusting your search criteria"
+  "0-0 of 0 results": "0-0 of 0 results",
+  "Itens": "Items",
+  "First page": "First page",
+  "Previous page": "Previous page",
+  "Next page": "Next page",
+  "Last page": "Last page",
+  "Searching...": "Searching...",
+  "Name": "Name",
+  "Size": "Size",
+  "Modified": "Modified",
+  "Tags": "Tags"
 }

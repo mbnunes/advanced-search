@@ -80,7 +80,7 @@ style('advancedsearch', 'style');
                     <!-- Paginação adicionada aqui -->
                     <div class="pagination-wrapper hidden" id="pagination">
                         <div class="pagination-info">
-                            <span id="pagination-info">Mostrando 0-0 de 0 resultados</span>
+                            <span id="pagination-info"><?php p($l->t('0-0 of 0 results')); ?></span>
                         </div>
                         
                         <div class="pagination-controls">
@@ -97,7 +97,7 @@ style('advancedsearch', 'style');
                             </div>
                             
                             <div class="page-size-selector">
-                                <label for="page-size"><?php p($l->t('Items por pág')); ?>:</label>
+                                <label for="page-size"><?php p($l->t('Itens')); ?>:</label>
                                 <select id="page-size">
                                     <option value="10">10</option>
                                     <option value="25" selected>25</option>
