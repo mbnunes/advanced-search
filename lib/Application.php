@@ -18,10 +18,10 @@ class Application extends App implements IBootstrap {
 
     public function register(IRegistrationContext $context): void {
 
-        $context->registerService(IL10N::class, function($c) {
-            return $c->getServerContainer()->getL10N(self::APP_ID);
-        });
-        
+        // $context->registerService(IL10N::class, function($c) {
+        //     return $c->getServerContainer()->getL10N(self::APP_ID);
+        // });
+
         // Registrar serviços se necessário
         $context->registerService(SearchService::class, function($c) {
             $server = $c->getServerContainer();
