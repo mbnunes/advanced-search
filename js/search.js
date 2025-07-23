@@ -125,12 +125,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     lastSearchType = data.searchType || 'traditional';
                     fullTextSearchAvailable = data.fullTextSearchAvailable || false;
 
-                    console.log('Tipo de data.files:', typeof data.files);
-                    console.log('data.files é um array?', Array.isArray(data.files));
-                    console.log('Conteúdo de data.files:', data.files);
-                    console.log('Tipo de busca usado:', lastSearchType);
-                    console.log('Full text search disponível:', fullTextSearchAvailable);
-                    console.log('=== DEBUG INFO ===', data.debug);
+                    // console.log('Tipo de data.files:', typeof data.files);
+                    // console.log('data.files é um array?', Array.isArray(data.files));
+                    // console.log('Conteúdo de data.files:', data.files);
+                    // console.log('Tipo de busca usado:', lastSearchType);
+                    // console.log('Full text search disponível:', fullTextSearchAvailable);
+                    // console.log('=== DEBUG INFO ===', data.debug);
 
                     // Para obter o total real, fazer uma busca sem limite
                     getTotalCount(lastSearchParams).then(total => {
@@ -477,38 +477,95 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
             });
 
-            fileCard.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+            // fileCard.addEventListener('click', async (e) => {
+            //     e.preventDefault();
+            //     e.stopPropagation();
 
-                if (isImage || isVideo) {
-                    try {
-                        const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
-                        OCA.Viewer.open({ 
-                            path: cleanPath,
-                            enableSidebar: true
-                        });
+            //     if (isImage || isVideo) {
+            //         try {
+            //             const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
+            //             OCA.Viewer.open({ 
+            //                 path: cleanPath,
+            //                 enableSidebar: true
+            //             });
 
-                        // Opção 2: Com file e path
-                        OCA.Viewer.open({ 
-                            fileInfo: {
-                                path: file.path,
-                                mime: file.mimetype,
-                                fileid: file.id
-                            },
-                            enableSidebar: true
-                        });
-                    } catch (err) {
-                        console.error('Erro ao abrir viewer:', err);
-                    }
-                }else {
-                    // Fallback
-                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                    window.open(fileUrl, '_blank');
-                }
+            //             // Opção 2: Com file e path
+            //             OCA.Viewer.open({ 
+            //                 fileInfo: {
+            //                     path: file.path,
+            //                     mime: file.mimetype,
+            //                     fileid: file.id
+            //                 },
+            //                 enableSidebar: true
+            //             });
+            //         } catch (err) {
+            //             console.error('Erro ao abrir viewer:', err);
+            //         }
+            //     }else {
+            //         // Fallback
+            //         const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
+            //         window.open(fileUrl, '_blank');
+            //     }
 
                 
+            // });
+
+            fileCard.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isImage || isVideo) {
+        try {
+            const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
+            
+            // Definir o contexto do Files app antes de abrir o viewer
+            if (OCA.Files && !OCA.Files.App) {
+                // Inicializar o contexto do Files se não existir
+                OCA.Files.App = {
+                    fileList: {
+                        filesClient: OC.Files.getClient(),
+                        $el: document.querySelector('#app-content-files') || document.body
+                    }
+                };
+            }
+
+            // Definir o arquivo atual no contexto
+            if (OCA.Files?.App?.fileList) {
+                OCA.Files.App.fileList.currentFile = {
+                    id: file.id,
+                    name: file.name,
+                    path: cleanPath,
+                    mimetype: file.mimetype,
+                    permissions: file.permissions || 'RGDNVW',
+                    hasPreview: true,
+                    size: file.size,
+                    etag: file.etag || '',
+                    mtime: file.mtime
+                };
+            }
+
+            // Abrir o viewer com contexto completo
+            OCA.Viewer.open({
+                fileInfo: {
+                    id: file.id,
+                    name: file.name,
+                    path: cleanPath,
+                    mimetype: file.mimetype,
+                    permissions: file.permissions || 'RGDNVW',
+                    hasPreview: true,
+                    size: file.size,
+                    etag: file.etag || '',
+                    mtime: file.mtime
+                },
+                // Definir que estamos no contexto do Files
+                context: 'files'
             });
+
+        } catch (err) {
+            console.error('Erro ao abrir viewer:', err);
+        }
+    }
+});
 
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
