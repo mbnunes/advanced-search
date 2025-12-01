@@ -9,6 +9,8 @@ use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
 use OCP\App\IAppManager;
+use OCP\FullTextSearch\Model\SearchRequest;
+use OCP\FullTextSearch\IFullTextSearchManager;
 
 class SearchService
 {
@@ -16,8 +18,8 @@ class SearchService
     private $userSession;
     private $systemTagManager;
     private $systemTagObjectMapper;
-    private $fullTextSearchManager;
     private $appManager;
+    private $fullTextSearchManager;
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -25,26 +27,17 @@ class SearchService
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
         IAppManager $appManager,
-                ?IFullTextSearchManager $fullTextSearchManager = null // Adicionar como opcional
+        ?IFullTextSearchManager $fullTextSearchManager = null
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
         $this->appManager = $appManager;
-                $this->fullTextSearchManager = $fullTextSearchManager;
+        $this->fullTextSearchManager = $fullTextSearchManager;
     }
 
-    private function checkFulltextSearchAvailable()
-    {
-        if (!$this->appManager->isEnabledForUser('fulltextsearch')) {
-            throw new \Exception('Fulltextsearch app não está habilitado');
-        }
-        return true;
-    }
-
-    // MANTER SUA FUNÇÃO ORIGINAL searchFiles EXATAMENTE COMO ESTAVA
-    public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0)
+    public function searchFiles(string $query = '', array $tags = [], string $tagOperator = 'AND', string $fileType = '', int $limit = 100, int $offset = 0): array
     {
         $user = $this->userSession->getUser();
         if (!$user) {
@@ -54,34 +47,38 @@ class SearchService
         $userFolder = $this->rootFolder->getUserFolder($user->getUID());
         $results = [];
 
-        // Buscar arquivos
-        if (!empty($filename)) {
-            // Certificar que o filename não está vazio antes de chamar search()
-            $searchTerm = trim($filename);
+        // Parse query for tags if tags array is empty (unified search fallback)
+        $searchTerm = $query;
+        if (empty($tags) && !empty($query)) {
+            $parsed = $this->parseQuery($query);
+            $searchTerm = $parsed['term'];
+            $tags = $parsed['tags'];
+            // Default to AND for inline tags
+            $tagOperator = 'AND';
+        }
+
+        // Search files
+        if (!empty($searchTerm)) {
             if (strlen($searchTerm) > 0) {
                 $searchResults = $userFolder->search($searchTerm);
             } else {
                 $searchResults = [];
             }
         } else {
-            // Se não tem nome, buscar por outros critérios
             $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
         }
 
-        // Filtrar e processar resultados
+        // Filter and process results
         $filteredResults = [];
         foreach ($searchResults as $file) {
-            // Verificar se é arquivo (não pasta)
             if ($file->getType() !== FileInfo::TYPE_FILE) {
                 continue;
             }
 
-            // Filtrar por tipo de arquivo
             if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
                 continue;
             }
 
-            // Filtrar por tags
             if (!empty($tags) && !$this->fileMatchesTags($file->getId(), $tags, $tagOperator)) {
                 continue;
             }
@@ -89,10 +86,10 @@ class SearchService
             $filteredResults[] = $file;
         }
 
-        // Aplicar paginação
+        // Pagination
         $paginatedResults = array_slice($filteredResults, $offset, $limit);
 
-        // Formatar resultados
+        // Format results
         foreach ($paginatedResults as $file) {
             $results[] = $this->formatFileResult($file);
         }
@@ -100,145 +97,122 @@ class SearchService
         return $results;
     }
 
-    // NOVA FUNÇÃO PARA FULL TEXT SEARCH (OPCIONAL)
-    public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
-    // Log para debug
-    error_log('searchFilesWithFullText called with filename: ' . $filename);
-    error_log('FullTextSearchManager exists: ' . ($this->fullTextSearchManager ? 'true' : 'false'));
-    
-    // Se full text search não estiver disponível ou não há busca por texto, usar método tradicional
-    if (!$this->fullTextSearchManager || empty($filename)) {
-        error_log('Using traditional search - no manager or empty filename');
-        return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-    }
-
-    try {
-        $user = $this->userSession->getUser();
-        if (!$user) {
-            throw new \Exception('User not logged in');
-        }
-
-        // Usar a API correta do FullTextSearch
-        $searchRequest = new \OCP\FullTextSearch\Model\SearchRequest();
-        $searchRequest->setSearch($filename);
-        $searchRequest->setAuthor($user->getUID());
-        
-        // Configurar paginação
-        $page = floor($offset / $limit) + 1;
-        $searchRequest->setPage($page);
-        $searchRequest->setSize($limit);
-        
-        // Definir provedor - apenas arquivos
-        $searchRequest->setProviders(['files']);
-        
-        // Executar busca
-        $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
-        
-        // Processar resultados
-        $results = [];
-        $userFolder = $this->rootFolder->getUserFolder($user->getUID());
-        
-        foreach ($searchResult->getDocuments() as $document) {
-            try {
-                // O ID do documento no FullTextSearch para arquivos é geralmente o fileId
-                $fileId = (int) $document->getId();
-                $nodes = $userFolder->getById($fileId);
-                
-                if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
-                    $fileInfo = $nodes[0];
-                    
-                    // Aplicar filtros
-                    if (!empty($fileType) && !$this->matchesFileType($fileInfo, $fileType)) {
-                        continue;
-                    }
-                    
-                    if (!empty($tags) && !$this->fileMatchesTags($fileInfo->getId(), $tags, $tagOperator)) {
-                        continue;
-                    }
-                    
-                    $result = $this->formatFileResult($fileInfo);
-                    $result['searchType'] = 'fulltext';
-                    $result['score'] = $document->getScore();
-                    $result['excerpt'] = $document->getExcerpts();
-                    $results[] = $result;
-                }
-            } catch (\Exception $e) {
-                error_log('Error processing document: ' . $e->getMessage());
-                continue;
-            }
-        }
-        
-        return $results;
-        
-    } catch (\Exception $e) {
-        error_log('FullTextSearch error: ' . $e->getMessage());
-        // Se der erro, usar busca tradicional
-        return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-    }
-}
-
-    private function getFileInfoFromDocument($document, $userFolder)
+    public function searchFilesWithFullText(string $query = '', array $tags = [], string $tagOperator = 'AND', string $fileType = '', int $limit = 100, int $offset = 0): array
     {
-        $fileId = $document->getId();
-
-        if ($fileId) {
-            try {
-                $nodes = $userFolder->getById($fileId);
-                if (!empty($nodes)) {
-                    return $nodes[0];
-                }
-            } catch (\Exception $e) {
-                // Continuar
-            }
+        if (!$this->fullTextSearchManager || empty($query)) {
+            return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
         }
 
-        return null;
+        try {
+            $user = $this->userSession->getUser();
+            if (!$user) {
+                throw new \Exception('User not logged in');
+            }
+
+            $searchRequest = new SearchRequest();
+            $searchRequest->setSearch($query);
+            $searchRequest->setAuthor($user->getUID());
+            
+            $page = floor($offset / $limit) + 1;
+            $searchRequest->setPage($page);
+            $searchRequest->setSize($limit);
+            $searchRequest->setProviders(['files']);
+            
+            $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
+            
+            $results = [];
+            $userFolder = $this->rootFolder->getUserFolder($user->getUID());
+            
+            foreach ($searchResult->getDocuments() as $document) {
+                try {
+                    $fileId = (int) $document->getId();
+                    $nodes = $userFolder->getById($fileId);
+                    
+                    if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
+                        $fileInfo = $nodes[0];
+                        
+                        if (!empty($fileType) && !$this->matchesFileType($fileInfo, $fileType)) {
+                            continue;
+                        }
+                        
+                        // Note: FullTextSearch might handle tags internally if configured, 
+                        // but here we are just searching by text. 
+                        // If strict tag filtering is needed on top of FTS results, uncomment below:
+                        /*
+                        if (!empty($tags) && !$this->fileMatchesTags($fileInfo->getId(), $tags, $tagOperator)) {
+                            continue;
+                        }
+                        */
+                        
+                        $result = $this->formatFileResult($fileInfo);
+                        $result['searchType'] = 'fulltext';
+                        $result['score'] = $document->getScore();
+                        $result['excerpt'] = $document->getExcerpts();
+                        $results[] = $result;
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+            
+            return $results;
+            
+        } catch (\Exception $e) {
+            return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
+        }
     }
 
-    public function isFullTextSearchAvailable()
+    private function parseQuery(string $query): array
+    {
+        $tags = [];
+        $terms = [];
+        
+        $parts = explode(' ', $query);
+        foreach ($parts as $part) {
+            if (str_starts_with($part, '#') && strlen($part) > 1) {
+                $tags[] = substr($part, 1);
+            } else {
+                $terms[] = $part;
+            }
+        }
+        
+        return [
+            'term' => implode(' ', $terms),
+            'tags' => $tags
+        ];
+    }
+
+    public function isFullTextSearchAvailable(): bool
     {
         if (!$this->fullTextSearchManager) {
             return false;
         }
 
         try {
-            // Verificar se o serviço está disponível
-            $isAvailable = $this->fullTextSearchManager->isAvailable();
-
-            // Log para debug
-            error_log('FullTextSearch isAvailable(): ' . ($isAvailable ? 'true' : 'false'));
-
-            return $isAvailable;
+            return $this->fullTextSearchManager->isAvailable();
         } catch (\Exception $e) {
-            error_log('Error checking FullTextSearch availability: ' . $e->getMessage());
             return false;
         }
     }
 
-    // MANTER TODAS AS SUAS FUNÇÕES ORIGINAIS ABAIXO SEM ALTERAÇÃO
-
-    private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator)
+    private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator): array
     {
-        // Se só temos busca por tags, usar método específico
         if (!empty($tags) && empty($fileType)) {
             return $this->searchByTagsOnly($userFolder, $tags, $tagOperator);
         }
 
-        // Se só temos busca por tipo de arquivo, buscar por extensão comum
         if (!empty($fileType) && empty($tags)) {
             return $this->searchByFileTypeOnly($userFolder, $fileType);
         }
 
-        // Busca geral - pegar arquivos recentes como fallback
         try {
             return $userFolder->getRecent(1000);
         } catch (\Exception $e) {
-            // Se getRecent não funcionar, retornar array vazio
             return [];
         }
     }
 
-    private function searchByTagsOnly($userFolder, $tags, $tagOperator)
+    private function searchByTagsOnly($userFolder, $tags, $tagOperator): array
     {
         $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
         $files = [];
@@ -250,7 +224,6 @@ class SearchService
                     $files[] = $fileNodes[0];
                 }
             } catch (\Exception $e) {
-                // Arquivo não encontrado ou sem permissão
                 continue;
             }
         }
@@ -258,17 +231,15 @@ class SearchService
         return $files;
     }
 
-    private function searchByFileTypeOnly($userFolder, $fileType)
+    private function searchByFileTypeOnly($userFolder, $fileType): array
     {
         $extensions = $this->getExtensionsForFileType($fileType);
         $files = [];
 
         foreach ($extensions as $extension) {
             try {
-                // Buscar com ponto antes da extensão
                 $searchResults = $userFolder->search('.' . $extension);
                 foreach ($searchResults as $result) {
-                    // Verificar se realmente termina com a extensão
                     if (strtolower(pathinfo($result->getName(), PATHINFO_EXTENSION)) === $extension) {
                         $files[] = $result;
                     }
@@ -281,20 +252,15 @@ class SearchService
         return $files;
     }
 
-    // MÉTODO CORRIGIDO PARA NEXTCLOUD 31
-    private function getFileIdsByTags($tags, $operator)
+    private function getFileIdsByTags($tags, $operator): array
     {
-        $fileIds = [];
-
         try {
-            // Coletar IDs das tags
             $tagIds = [];
             foreach ($tags as $tagName) {
                 $tagId = $this->getTagIdByName($tagName);
                 if ($tagId) {
                     $tagIds[] = $tagId;
                 } else if ($operator === 'AND') {
-                    // Se operador é AND e uma tag não existe, retornar vazio
                     return [];
                 }
             }
@@ -304,28 +270,23 @@ class SearchService
             }
 
             if ($operator === 'AND') {
-                // Para AND, usar getObjectIdsForTags que retorna apenas objetos com TODAS as tags
-                $fileIds = $this->systemTagObjectMapper->getObjectIdsForTags($tagIds, 'files');
-            } else { // OR
-                // Para OR, buscar objetos para cada tag e fazer união
+                return $this->systemTagObjectMapper->getObjectIdsForTags($tagIds, 'files');
+            } else {
                 $allFileIds = [];
                 foreach ($tagIds as $tagId) {
                     $tagFileIds = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
                     $allFileIds = array_merge($allFileIds, $tagFileIds);
                 }
-                $fileIds = array_unique($allFileIds);
+                return array_unique($allFileIds);
             }
         } catch (\Exception $e) {
             return [];
         }
-
-        return $fileIds;
     }
 
-    private function getTagIdByName($tagName)
+    private function getTagIdByName($tagName): ?string
     {
         try {
-            // Buscar todas as tags do sistema
             $allTags = $this->systemTagManager->getAllTags();
 
             foreach ($allTags as $tag) {
@@ -340,7 +301,7 @@ class SearchService
         return null;
     }
 
-    private function matchesFileType($file, $fileType)
+    private function matchesFileType($file, $fileType): bool
     {
         $mimetype = $file->getMimetype();
         $extension = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
@@ -370,7 +331,7 @@ class SearchService
         }
     }
 
-    private function getExtensionsForFileType($fileType)
+    private function getExtensionsForFileType($fileType): array
     {
         switch ($fileType) {
             case 'image':
@@ -393,7 +354,7 @@ class SearchService
         }
     }
 
-    private function fileMatchesTags($fileId, $tags, $tagOperator)
+    private function fileMatchesTags($fileId, $tags, $tagOperator): bool
     {
         $fileTags = $this->getFileTags($fileId);
         $fileTagNames = array_column($fileTags, 'name');
@@ -402,12 +363,12 @@ class SearchService
 
         if ($tagOperator === 'AND') {
             return count($matches) === count($tags);
-        } else { // OR
+        } else {
             return count($matches) > 0;
         }
     }
 
-    private function formatFileResult($file)
+    private function formatFileResult($file): array
     {
         return [
             'id' => $file->getId(),
@@ -422,8 +383,7 @@ class SearchService
         ];
     }
 
-    // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagIdsForObjects
-    private function getFileTags($fileId)
+    private function getFileTags($fileId): array
     {
         try {
             $tagIds = $this->systemTagObjectMapper->getTagIdsForObjects([$fileId], 'files');
@@ -447,36 +407,5 @@ class SearchService
         } catch (\Exception $e) {
             return [];
         }
-    }
-
-    // Funcao de DEBUG
-    public function debugFullTextSearch()
-    {
-        $debug = [];
-
-        // Verificar se a classe existe
-        $debug['class_exists'] = class_exists('\OCP\FullTextSearch\IFullTextSearchManager');
-
-        // Verificar se o manager foi injetado
-        $debug['manager_exists'] = $this->fullTextSearchManager !== null;
-
-        if ($this->fullTextSearchManager) {
-            try {
-                $debug['is_available'] = $this->fullTextSearchManager->isAvailable();
-            } catch (\Exception $e) {
-                $debug['is_available_error'] = $e->getMessage();
-            }
-
-            try {
-                // Tentar listar provedores
-                $debug['providers'] = method_exists($this->fullTextSearchManager, 'getProviders')
-                    ? $this->fullTextSearchManager->getProviders()
-                    : 'method_not_exists';
-            } catch (\Exception $e) {
-                $debug['providers_error'] = $e->getMessage();
-            }
-        }
-
-        return $debug;
     }
 }

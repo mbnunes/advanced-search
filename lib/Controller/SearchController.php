@@ -14,74 +14,48 @@ class SearchController extends Controller
     private $searchService;
     private $systemTagManager;
 
-    public function __construct($AppName, IRequest $request, SearchService $searchService, ISystemTagManager $systemTagManager)
-    {
+    public function __construct(
+        string $AppName,
+        IRequest $request,
+        SearchService $searchService,
+        ISystemTagManager $systemTagManager
+    ) {
         parent::__construct($AppName, $request);
         $this->searchService = $searchService;
         $this->systemTagManager = $systemTagManager;
     }
 
     #[NoAdminRequired]
-    public function search()
+    public function search(): JSONResponse
     {
         try {
-            // Pegar dados do corpo da requisição POST
             $params = $this->request->getParams();
 
-            $debug = $this->searchService->debugFullTextSearch();
-
-            // Extrair parâmetros com valores padrão
-            $filename = isset($params['filename']) ? trim($params['filename']) : '';
-            $tags = isset($params['tags']) && is_array($params['tags']) ? $params['tags'] : [];
-            $tagOperator = isset($params['tagOperator']) ? $params['tagOperator'] : 'AND';
+            $query = isset($params['query']) ? trim($params['query']) : '';
             $fileType = isset($params['fileType']) ? $params['fileType'] : '';
             $limit = isset($params['limit']) ? max(1, min(500, (int)$params['limit'])) : 100;
             $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
-            $useFullTextSearch = isset($params['useFullTextSearch']) ? (bool)$params['useFullTextSearch'] : true; // MUDANÇA: Padrão true
-
-            // Validar tagOperator
-            if (!in_array($tagOperator, ['AND', 'OR'])) {
-                $tagOperator = 'AND';
-            }
-
-            // Filtrar tags vazias
-            $tags = array_filter($tags, function ($tag) {
-                return !empty(trim($tag));
-            });
+            $useFullTextSearch = isset($params['useFullTextSearch']) ? (bool)$params['useFullTextSearch'] : true;
 
             $fullTextAvailable = $this->searchService->isFullTextSearchAvailable();
-
-            // LÓGICA OTIMIZADA: Sempre tentar FullTextSearch primeiro quando há busca por nome
-            $actualSearchType = 'traditional';
             $searchMethod = 'traditional';
+            $actualSearchType = 'traditional';
 
-            if (!empty($filename)) {
-                // Se tem busca por nome, decidir qual método usar
-                if ($fullTextAvailable && $useFullTextSearch) {
-                    // Tentar FullTextSearch primeiro
-                    $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                    $searchMethod = 'fulltext_attempted';
-
-                    // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
-                    if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
-                        $actualSearchType = 'fulltext';
-                    } else {
-                        $actualSearchType = 'traditional_fallback';
-                    }
+            if (!empty($query) && $fullTextAvailable && $useFullTextSearch) {
+                $results = $this->searchService->searchFilesWithFullText($query, [], 'AND', $fileType, $limit, $offset);
+                
+                if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
+                    $actualSearchType = 'fulltext';
+                    $searchMethod = 'fulltext';
                 } else {
-                    // Usar busca tradicional diretamente
-                    $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                    $searchMethod = 'traditional_direct';
+                    $searchMethod = 'traditional_fallback';
                 }
-            } else {
-                // Se não tem busca por nome (apenas tags ou tipo), usar sempre tradicional
-                $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchMethod = 'traditional_no_filename';
             }
 
-            // Adicionar tempo de execução para debug
-            $endTime = microtime(true);
-            $executionTime = isset($startTime) ? ($endTime - $startTime) : null;
+            if ($actualSearchType === 'traditional') {
+                // Fallback: parse query for tags
+                $results = $this->searchService->searchFiles($query, [], 'AND', $fileType, $limit, $offset);
+            }
 
             return new JSONResponse([
                 'success' => true,
@@ -93,24 +67,18 @@ class SearchController extends Controller
                     'actualSearchType' => $actualSearchType,
                     'searchMethod' => $searchMethod,
                     'fullTextSearchAvailable' => $fullTextAvailable,
-                    'requestedFullText' => $useFullTextSearch,
-                    'hasFilename' => !empty($filename),
-                    'hasTags' => !empty($tags),
-                    'executionTime' => $executionTime
-                ],
-                'debug' => $debug  // INFORMAÇÕES DE DEBUG
+                ]
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([
                 'success' => false,
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString() // Adicionar para debug em desenvolvimento
+                'message' => $e->getMessage()
             ], 500);
         }
     }
 
     #[NoAdminRequired]
-    public function getTags()
+    public function getTags(): JSONResponse
     {
         try {
             $allTags = $this->systemTagManager->getAllTags();
@@ -125,25 +93,6 @@ class SearchController extends Controller
             return new JSONResponse([
                 'success' => true,
                 'tags' => $tagNames
-            ]);
-        } catch (\Exception $e) {
-            return new JSONResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    #[NoAdminRequired]
-    #[NoCSRFRequired]  // ADICIONAR ESTA LINHA
-    public function debug()
-    {
-        try {
-            $debug = $this->searchService->debugFullTextSearch();
-
-            return new JSONResponse([
-                'success' => true,
-                'debug' => $debug
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([

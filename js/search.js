@@ -1,7 +1,7 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Elementos principais
+    // Main elements
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
     const fileList = document.getElementById('fileList');
@@ -11,8 +11,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const viewListBtn = document.getElementById('view-list');
     const viewGridBtn = document.getElementById('view-grid');
     const fileTable = document.getElementById('filestable');
+    const filenameInput = document.getElementById('filename');
 
-    // Elementos de paginação
+    // Pagination elements
     const pagination = document.getElementById('pagination');
     const paginationInfo = document.getElementById('pagination-info');
     const firstPageBtn = document.getElementById('first-page');
@@ -22,9 +23,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const pageNumbers = document.getElementById('page-numbers');
     const pageSizeSelect = document.getElementById('page-size');
 
-    // Verificar elementos essenciais
+    // Check essential elements
     if (!searchBtn || !fileList || !emptyContent) {
-        console.error('Elementos essenciais não encontrados!');
+        console.error('Essential elements not found!');
         return;
     }
 
@@ -35,16 +36,15 @@ document.addEventListener('DOMContentLoaded', function () {
     let lastSearchParams = null;
     let fullTextSearchAvailable = true;
     let lastSearchType = 'traditional';
+    let searchTimeout = null;
 
-    // Event listeners - apenas adicionar se o elemento existir
+    // Event listeners
     if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
     if (clearBtn) clearBtn.addEventListener('click', clearSearch);
 
-    // View buttons podem não existir em todas as páginas
     if (viewListBtn) viewListBtn.addEventListener('click', () => setView('list'));
     if (viewGridBtn) viewGridBtn.addEventListener('click', () => setView('grid'));
 
-    // Event listeners de paginação
     if (firstPageBtn) firstPageBtn.addEventListener('click', () => goToPage(1));
     if (prevPageBtn) prevPageBtn.addEventListener('click', () => goToPage(currentPage - 1));
     if (nextPageBtn) nextPageBtn.addEventListener('click', () => goToPage(currentPage + 1));
@@ -60,32 +60,45 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Busca ao pressionar Enter
+    // Debounced search on input
+    if (filenameInput) {
+        filenameInput.addEventListener('input', function () {
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            searchTimeout = setTimeout(() => {
+                performSearch(1);
+            }, 500); // 500ms debounce
+        });
+    }
+
+    // Search on Enter
     document.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter' && !e.target.matches('#tags')) {
+        if (e.key === 'Enter') {
+            if (searchTimeout) clearTimeout(searchTimeout);
             performSearch(1);
         }
     });
 
     function performSearch(page = 1) {
-        const filename = document.getElementById('filename').value;
-        const tagsInput = document.getElementById('tags').value;
-        const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
+        const query = document.getElementById('filename').value; // Using filename input as the main query input
         const fileType = document.getElementById('file-type').value;
 
-        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
-
-        // Validação básica
-        if (!filename && tags.length === 0 && !fileType) {
-            showError('Por favor, insira pelo menos um critério de busca');
+        // Basic validation
+        if (!query && !fileType) {
+            // Don't show error if it's an automatic search from empty input, just clear
+            if (page === 1 && !lastSearchParams) {
+                 return;
+            }
+            // If user explicitly clicked search or it was a valid search before
+            if (lastSearchParams) {
+                clearSearch();
+            }
             return;
         }
 
-        // Salvar parâmetros da última busca
         lastSearchParams = {
-            filename: filename,
-            tags: tags,
-            tagOperator: tagOperator,
+            query: query,
             fileType: fileType,
             useFullTextSearch: true
         };
@@ -103,9 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 'requesttoken': OC.requestToken
             },
             body: JSON.stringify({
-                filename: filename,
-                tags: tags,
-                tagOperator: tagOperator,
+                query: query,
                 fileType: fileType,
                 limit: pageSize,
                 offset: offset,
@@ -140,13 +151,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         updateSearchInfo(data);
                     });
                 } else {
-                    showError(data.message || 'Erro desconhecido na busca');
+                    showError(data.message || 'Unknown error during search');
                 }
             })
             .catch(error => {
                 hideLoading();
-                console.error('Erro na busca:', error);
-                showError('Erro de conexão. Tente novamente.');
+                console.error('Search error:', error);
+                showError('Connection error. Please try again.');
             });
     }
 
@@ -155,13 +166,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (resultCount) {
             let searchInfo = '';
             if (data.searchType === 'fulltext') {
-                searchInfo = ' (busca avançada)';
+                searchInfo = ' (Advanced Search)';
             } else if (data.searchType === 'traditional') {
-                searchInfo = ' (busca tradicional)';
+                searchInfo = ' (Traditional Search)';
             }
 
             const currentText = resultCount.textContent;
-            if (currentText && !currentText.includes('(busca')) {
+            if (currentText && !currentText.includes('Search)')) {
                 resultCount.textContent = currentText + searchInfo;
             }
         }
@@ -209,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const start = (currentPage - 1) * pageSize + 1;
         const end = Math.min(currentPage * pageSize, totalResults);
         if (paginationInfo) {
-            paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+            paginationInfo.textContent = `Showing ${start}-${end} of ${totalResults} results`;
         }
 
         // Habilitar/desabilitar botões
@@ -303,10 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         document.getElementById('filename').value = '';
-        document.getElementById('tags').value = '';
         document.getElementById('file-type').value = '';
-        const tagAndRadio = document.getElementById('tag-and');
-        if (tagAndRadio) tagAndRadio.checked = true;
 
         fileList.innerHTML = '';
         if (resultCount) resultCount.textContent = '';
@@ -317,8 +325,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // Restaurar texto inicial
         const emptyTitle = document.querySelector('#emptycontent h2');
         const emptyText = document.querySelector('#emptycontent p');
-        if (emptyTitle) emptyTitle.textContent = 'Faça uma busca';
-        if (emptyText) emptyText.textContent = 'Use os filtros ao lado para buscar seus arquivos';
+        if (emptyTitle) emptyTitle.textContent = 'Search Files';
+        if (emptyText) emptyText.textContent = 'Use the search bar to find your files';
 
         lastSearchParams = null;
         currentPage = 1;
@@ -331,16 +339,16 @@ document.addEventListener('DOMContentLoaded', function () {
             showEmptyContent();
             const emptyTitle = document.querySelector('#emptycontent h2');
             const emptyText = document.querySelector('#emptycontent p');
-            if (emptyTitle) emptyTitle.textContent = 'Nenhum resultado encontrado';
-            if (emptyText) emptyText.textContent = 'Tente ajustar seus critérios de busca';
-            if (resultCount) resultCount.textContent = 'Nenhum resultado encontrado';
+            if (emptyTitle) emptyTitle.textContent = 'No results found';
+            if (emptyText) emptyText.textContent = 'Try adjusting your search criteria';
+            if (resultCount) resultCount.textContent = 'No results found';
             return;
         }
 
         hideEmptyContent();
 
         if (resultCount) {
-            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+            resultCount.textContent = `${totalResults} file${totalResults !== 1 ? 's' : ''} found`;
         }
 
         // Verificar se files é um array, caso contrário, converter
@@ -371,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Adicionar indicador de busca avançada se disponível
             let searchIndicator = '';
             if (file.searchType === 'fulltext' && file.score) {
-                searchIndicator = `<span class="search-score" title="Relevância: ${file.score.toFixed(2)}">⭐</span>`;
+                searchIndicator = `<span class="search-score" title="Relevance: ${file.score.toFixed(2)}">⭐</span>`;
             }
 
             html += `
@@ -402,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </a>
                 </td>
                 <td class="tags">
-                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">Nenhuma</span>'}</div>
+                    <div class="file-tags">${tags || '<span style="color: var(--color-text-light);">None</span>'}</div>
                 </td>
             </tr>
         `;
@@ -452,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const scoreIndicator = document.createElement('div');
                 scoreIndicator.className = 'score-indicator';
                 scoreIndicator.innerHTML = '⭐';
-                scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
+                scoreIndicator.title = `Relevance: ${file.score.toFixed(2)}`;
                 scoreIndicator.style.cssText = `
                 position: absolute;
                 top: 8px;
@@ -483,89 +491,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (isImage || isVideo) {
                     try {
-                        const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
-                        OCA.Viewer.open({ 
-                            path: cleanPath,
-                            enableSidebar: true
-                        });
-
-                        // Opção 2: Com file e path
-                        OCA.Viewer.open({ 
-                            fileInfo: {
-                                path: file.path,
-                                mime: file.mimetype,
-                                fileid: file.id
-                            },
-                            enableSidebar: true
-                        });
+                        // Use OCA.Viewer correctly
+                        if (OCA.Viewer) {
+                            OCA.Viewer.open({
+                                fileInfo: {
+                                    id: file.id,
+                                    name: file.name,
+                                    path: file.path,
+                                    mime: file.mimetype,
+                                    size: file.size,
+                                    mtime: file.mtime
+                                },
+                                context: 'files'
+                            });
+                        } else {
+                             console.error('OCA.Viewer not available');
+                        }
                     } catch (err) {
-                        console.error('Erro ao abrir viewer:', err);
+                        console.error('Error opening viewer:', err);
                     }
-                }else {
-                    // Fallback
+                } else {
                     const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
                     window.open(fileUrl, '_blank');
                 }
-
-                
             });
-
-            // fileCard.addEventListener('click', async (e) => {
-            //     e.preventDefault();
-            //     e.stopPropagation();
-
-            //     if (isImage || isVideo) {
-            //         try {
-            //             const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
-                        
-            //             // Definir o contexto do Files app antes de abrir o viewer
-            //             if (OCA.Files && !OCA.Files.App) {
-            //                 // Inicializar o contexto do Files se não existir
-            //                 OCA.Files.App = {
-            //                     fileList: {
-            //                         filesClient: OC.Files.getClient(),
-            //                         $el: document.querySelector('#app-content-files') || document.body
-            //                     }
-            //                 };
-            //             }
-
-            //             // Definir o arquivo atual no contexto
-            //             if (OCA.Files?.App?.fileList) {
-            //                 OCA.Files.App.fileList.currentFile = {
-            //                     id: file.id,
-            //                     name: file.name,
-            //                     path: cleanPath,
-            //                     mimetype: file.mimetype,
-            //                     permissions: file.permissions || 'RGDNVW',
-            //                     hasPreview: true,
-            //                     size: file.size,
-            //                     etag: file.etag || '',
-            //                     mtime: file.mtime
-            //                 };
-            //             }
-
-            //             // Abrir o viewer com contexto completo
-            //             OCA.Viewer.open({
-            //                 fileInfo: {
-            //                     id: file.id,
-            //                     name: file.name,
-            //                     path: cleanPath,
-            //                     mimetype: file.mimetype,
-            //                     permissions: file.permissions || 'RGDNVW',
-            //                     hasPreview: true,
-            //                     size: file.size,
-            //                     etag: file.etag || '',
-            //                     mtime: file.mtime
-            //                 },
-            //                 // Definir que estamos no contexto do Files
-            //                 context: 'files'
-            //             });
-
-            //         } catch (err) {
-            //             console.error('Erro ao abrir viewer:', err);
-            //         }
-            //     }
-            // });
 
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
@@ -656,7 +605,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             } else {
                 const noTags = document.createElement('span');
-                noTags.textContent = 'Nenhuma tag';
+                noTags.textContent = 'No tags';
                 noTags.style.cssText = `
                 font-size: 11px;
                 color: var(--color-text-lighter);
@@ -721,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 })
                 .catch(error => {
-                    console.error('Erro ao recarregar resultados:', error);
+                    console.error('Error reloading results:', error);
                 });
         }
     }
@@ -779,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showError(message) {
         showEmptyContent();
-        document.querySelector('#emptycontent h2').textContent = 'Erro';
+        document.querySelector('#emptycontent h2').textContent = 'Error';
         document.querySelector('#emptycontent p').textContent = message;
     }
 
