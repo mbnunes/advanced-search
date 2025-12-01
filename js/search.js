@@ -482,22 +482,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.stopPropagation();
 
                 if (isImage || isVideo) {
-                    try {
+		   try {
                         const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
-                        OCA.Viewer.open({ 
-                            path: cleanPath,
-                            enableSidebar: true
-                        });
+                        OCA.Viewer.open({
+                            path: cleanPath
+                        },{Sidebar:true});
 
-                        // Opção 2: Com file e path
-                        OCA.Viewer.open({ 
-                            fileInfo: {
-                                path: file.path,
-                                mime: file.mimetype,
-                                fileid: file.id
-                            },
-                            enableSidebar: true
-                        });
                     } catch (err) {
                         console.error('Erro ao abrir viewer:', err);
                     }
