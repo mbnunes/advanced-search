@@ -583,4 +583,63 @@ class SearchService
 
         return $debug;
     }
+    private function searchDirectElasticsearch($term, $limit, $offset)
+    {
+        $url = 'http://187.45.162.16:9200/cob2023/_search';
+        
+        // Construir a query
+        // Usar wildcard para busca parcial (ex: *BASQ*)
+        // Buscar no título e conteúdo
+        $query = [
+            'from' => $offset,
+            'size' => $limit,
+            'query' => [
+                'query_string' => [
+                    'query' => '*' . $term . '*',
+                    'fields' => ['title', 'content'],
+                    'default_operator' => 'AND'
+                ]
+            ]
+        ];
+
+        $payload = json_encode($query);
+
+        $this->log("Direct Elastic Request to $url: $payload");
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Timeout curto para não travar
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            $this->log("Direct Elastic CURL Error: $error");
+            throw new \Exception("Elasticsearch connection failed: $error");
+        }
+
+        if ($httpCode !== 200) {
+            $this->log("Direct Elastic HTTP Error $httpCode: $response");
+            throw new \Exception("Elasticsearch returned HTTP $httpCode");
+        }
+
+        $data = json_decode($response, true);
+        
+        if (!isset($data['hits']['hits'])) {
+            $this->log("Direct Elastic: Invalid response format");
+            return [];
+        }
+
+        $this->log("Direct Elastic: Found " . count($data['hits']['hits']) . " hits (Total: " . $data['hits']['total']['value'] . ")");
+
+        return $data['hits']['hits'];
+    }
 }
