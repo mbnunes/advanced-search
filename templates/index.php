@@ -4,8 +4,6 @@ style('viewer', 'style');
 
 // Carregar scripts do app Files para ter a sidebar
 script('files', 'sidebar');
-script('files', 'fileactions');
-script('files', 'filelist'); // Pode ser necessário
 style('files', 'files');
 
 script('advancedsearch', 'search');

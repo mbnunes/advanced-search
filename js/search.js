@@ -353,6 +353,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 console.log('Caminho limpo para o Viewer:', cleanPath);
                 
+                // Garantir que a aba de metadados esteja registrada
+                if (typeof ensureMetadataTabRegistered === 'function') {
+                    ensureMetadataTabRegistered();
+                }
+                
                 // Tentar abrir o Viewer
                 // Passar o fileId também pode ajudar se o Viewer suportar
                 try {
@@ -901,21 +906,19 @@ function setupAutocomplete(input, tags) {
     });
 }
 
-// Registro da aba personalizada de Metadados
-var registerMetadataTab = function() {
-    console.log('Search: Attempting to register MetadataTab...');
+// Função para registrar a aba (pode ser chamada sob demanda)
+var ensureMetadataTabRegistered = function() {
+    console.log('Search: Ensuring MetadataTab is registered...');
     
     if (window.OCA && window.OCA.Files && window.OCA.Files.Sidebar) {
-        console.log('Search: OCA.Files.Sidebar found. Registering MetadataTab...');
-        
         // Evitar registrar duas vezes
         if (OCA.Files.Sidebar.Tab.prototype._advancedSearchRegistered) {
-             console.log('MetadataTab already registered.');
-             return;
+             console.log('Search: MetadataTab already registered.');
+             return true;
         }
-        OCA.Files.Sidebar.Tab.prototype._advancedSearchRegistered = true;
-
-        // Definição simplificada para debug
+        
+        console.log('Search: Registering MetadataTab now...');
+        
         var MetadataTab = OCA.Files.Sidebar.Tab.extend({
             id: 'advancedSearchMetadata',
             name: 'Metadados',
@@ -926,43 +929,116 @@ var registerMetadataTab = function() {
             },
 
             enabled: function(fileInfo) {
-                console.log('MetadataTab.enabled called with:', fileInfo);
+                console.log('MetadataTab.enabled called');
                 return true;
             },
 
             mount: function(el, fileInfo, context) {
                 console.log('MetadataTab.mount called');
                 var $el = $(el);
-                $el.html('<h3>Metadados</h3><p>Carregando...</p>');
+                $el.addClass('advanced-search-metadata-tab');
+                $el.html('<div class="icon-loading"></div>');
+
+                // Tentar encontrar os dados do arquivo
+                var fileId = fileInfo.id;
+                var fileData = null;
                 
-                // Tentar renderizar dados reais se possível
-                if (fileInfo) {
-                     $el.append('<p>Nome: ' + (fileInfo.name || 'N/A') + '</p>');
-                     $el.append('<p>ID: ' + (fileInfo.id || 'N/A') + '</p>');
+                // Buscar no DOM
+                var row = document.querySelector('.file-row[data-id="' + fileId + '"]') || 
+                          document.querySelector('.file-card[data-id="' + fileId + '"]');
+                if (row && row.fileData) {
+                    fileData = row.fileData;
+                } else {
+                    // Fallback: procurar em todos
+                    var rows = document.querySelectorAll('.file-row, .file-card');
+                    for (var i = 0; i < rows.length; i++) {
+                        if (rows[i].fileData && rows[i].fileData.id == fileId) {
+                            fileData = rows[i].fileData;
+                            break;
+                        }
+                    }
+                }
+
+                if (fileData) {
+                    this._renderContent($el, fileData);
+                } else {
+                    // Fallback básico
+                    this._renderContent($el, {
+                        name: fileInfo.name,
+                        path: fileInfo.path || fileInfo.dir + '/' + fileInfo.name,
+                        size: fileInfo.size,
+                        mtime: fileInfo.mtime ? fileInfo.mtime / 1000 : null,
+                        mimetype: fileInfo.mimetype
+                    });
                 }
             },
 
             update: function(fileInfo) {
                 console.log('MetadataTab.update called');
+            },
+            
+            _renderContent: function($el, data) {
+                var html = '<div class="metadata-list">';
+                
+                html += this._renderRow('Nome', data.name);
+                
+                var cleanPath = data.path;
+                if (OC && OC.currentUser) {
+                    var userPrefix = '/' + OC.currentUser + '/files';
+                    if (cleanPath && cleanPath.includes(userPrefix)) {
+                        cleanPath = cleanPath.substring(cleanPath.indexOf(userPrefix) + userPrefix.length);
+                    }
+                }
+                html += this._renderRow('Caminho', cleanPath);
+                
+                html += this._renderRow('Tamanho', formatFileSize(data.size));
+                
+                if (data.mtime) {
+                    html += this._renderRow('Modificado', new Date(data.mtime * 1000).toLocaleString());
+                }
+                
+                if (data.score) {
+                    html += this._renderRow('Relevância', data.score.toFixed(2));
+                }
+                
+                if (data.tags && data.tags.length > 0) {
+                    var tagsHtml = data.tags.map(function(t) { return t.name; }).join(', ');
+                    html += this._renderRow('Tags', tagsHtml);
+                } else {
+                    html += this._renderRow('Tags', 'Sem tags');
+                }
+                
+                html += '</div>';
+                $el.html(html);
+            },
+
+            _renderRow: function(label, value) {
+                if (!value) return '';
+                return '<div class="metadata-row">' +
+                       '<div class="metadata-label">' + escapeHtml(label) + '</div>' +
+                       '<div class="metadata-value" title="' + escapeHtml(value) + '">' + escapeHtml(value) + '</div>' +
+                       '</div>';
             }
         });
 
         try {
-            var tabInstance = new MetadataTab();
-            OCA.Files.Sidebar.registerTab(tabInstance);
-            console.log('MetadataTab registered successfully');
+            OCA.Files.Sidebar.registerTab(new MetadataTab());
+            OCA.Files.Sidebar.Tab.prototype._advancedSearchRegistered = true;
+            console.log('Search: MetadataTab registered successfully');
+            return true;
         } catch (e) {
-            console.error('Error registering MetadataTab:', e);
+            console.error('Search: Error registering MetadataTab:', e);
+            return false;
         }
     } else {
-        console.error('Search: OCA.Files.Sidebar NOT found. Dependencies missing?');
-        console.log('window.OCA:', window.OCA);
-        if (window.OCA) console.log('window.OCA.Files:', window.OCA.Files);
+        console.error('Search: OCA.Files.Sidebar NOT found when ensuring registration.');
+        return false;
     }
 };
 
+// Tentar registrar no load também, por garantia
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', registerMetadataTab);
+    document.addEventListener('DOMContentLoaded', ensureMetadataTabRegistered);
 } else {
-    registerMetadataTab();
+    ensureMetadataTabRegistered();
 }
