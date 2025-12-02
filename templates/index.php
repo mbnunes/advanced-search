@@ -8,7 +8,7 @@ style('advancedsearch', 'style');
 <div id="app">
     <div id="app-navigation">
         <div class="app-navigation-new">
-            <h2><?php p($l->t('Advanced Search')); ?></h2>
+            <h2><?php p($l->t('Search')); ?></h2>
         </div>
         
         <div class="search-sidebar">
@@ -17,28 +17,8 @@ style('advancedsearch', 'style');
                 
                 <div class="search-form">
                     <div class="form-group">
-                        <label for="filename"><?php p($l->t('File Name')); ?>:</label>
-                        <input type="text" id="filename" class="input-field" placeholder="<?php p($l->t('Enter file name...')); ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="tags"><?php p($l->t('Tags')); ?>:</label>
-                        <input type="text" id="tags" class="input-field" placeholder="<?php p($l->t('Enter tags separated by comma...')); ?>">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><?php p($l->t('Tag Operator')); ?>:</label>
-                        <div class="radio-group">
-                            <label>
-                                <input type="radio" id="tag-and" name="tagOperator" value="AND" checked>
-                                <?php p($l->t('AND (all tags)')); ?>
-                            </label>
-                            
-                            <label>
-                                <input type="radio" id="tag-or" name="tagOperator" value="OR">
-                                <?php p($l->t('OR (any tag)')); ?>
-                            </label>
-                        </div>
+                        <label for="filename"><?php p($l->t('Search')); ?>:</label>
+                        <input type="text" id="filename" class="input-field" placeholder="<?php p($l->t('Search files, #tags, metadata...')); ?>">
                     </div>
                     
                     <div class="form-group">

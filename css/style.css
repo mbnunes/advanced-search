@@ -95,22 +95,7 @@
     outline: none;
 }
 
-.radio-group {
-    display: flex;
-    /* flex-direction: column; */
-    gap: 5px;
-}
 
-.radio-group label {
-    font-weight: normal;
-    display: flex;
-    align-items: center;
-    margin-bottom: 0;
-}
-
-.radio-group input[type="radio"] {
-    margin-right: 8px;
-}
 
 .button {
     padding: 8px 16px;
@@ -589,6 +574,7 @@
         white-space: normal;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
@@ -783,6 +769,7 @@
     white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

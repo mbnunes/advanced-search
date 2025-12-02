@@ -169,7 +169,7 @@ class SearchService
         
         $parts = explode(' ', $query);
         foreach ($parts as $part) {
-            if (str_starts_with($part, '#') && strlen($part) > 1) {
+            if (strpos($part, '#') === 0 && strlen($part) > 1) {
                 $tags[] = substr($part, 1);
             } else {
                 $terms[] = $part;

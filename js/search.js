@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (resultCount) {
             let searchInfo = '';
             if (data.searchType === 'fulltext') {
-                searchInfo = ' (Advanced Search)';
+                searchInfo = ' (Search)';
             } else if (data.searchType === 'traditional') {
                 searchInfo = ' (Traditional Search)';
             }
@@ -746,119 +746,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return div.innerHTML;
     }
 
-    // Inicialização
+    // Initialization
     showEmptyContent();
-    document.querySelector('#emptycontent h2').textContent = 'Faça uma busca';
-    document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
-
-    setupTagAutocomplete();
+    document.querySelector('#emptycontent h2').textContent = 'Search Files';
+    document.querySelector('#emptycontent p').textContent = 'Use the search bar to find your files';
 });
-
-function setupTagAutocomplete() {
-    const tagsInput = document.getElementById('tags');
-    let availableTags = [];
-
-    // Buscar tags disponíveis
-    fetch(OC.generateUrl('/apps/advancedsearch/api/tags'), {
-        method: 'GET',
-        headers: {
-            'requesttoken': OC.requestToken
-        }
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                availableTags = data.tags;
-                setupAutocomplete(tagsInput, availableTags);
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao buscar tags:', error);
-        });
-}
-
-function setupAutocomplete(input, tags) {
-    let currentFocus = -1;
-
-    input.addEventListener('input', function () {
-        const value = this.value;
-        const lastComma = value.lastIndexOf(',');
-        const currentTag = value.substring(lastComma + 1).trim();
-
-        closeAllLists();
-
-        if (!currentTag) return;
-
-        const matches = tags.filter(tag =>
-            tag.toLowerCase().includes(currentTag.toLowerCase())
-        );
-
-        if (matches.length > 0) {
-            showSuggestions(input, matches, currentTag, lastComma);
-        }
-    });
-
-    function showSuggestions(input, matches, currentTag, lastComma) {
-        const suggestions = document.createElement('div');
-        suggestions.className = 'autocomplete-suggestions';
-        suggestions.style.cssText = `
-            position: absolute;
-            background: var(--color-main-background);
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius);
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        `;
-
-        matches.forEach(tag => {
-            const suggestion = document.createElement('div');
-            suggestion.className = 'autocomplete-suggestion';
-            suggestion.textContent = tag;
-            suggestion.style.cssText = `
-                padding: 8px 12px;
-                cursor: pointer;
-                border-bottom: 1px solid var(--color-border);
-            `;
-
-            suggestion.addEventListener('click', function () {
-                const beforeCurrent = input.value.substring(0, lastComma + 1);
-                const afterCurrent = input.value.substring(lastComma + 1);
-                input.value = beforeCurrent + (beforeCurrent ? ' ' : '') + tag + ', ';
-                closeAllLists();
-                input.focus();
-            });
-
-            suggestion.addEventListener('mouseenter', function () {
-                this.style.background = 'var(--color-background-hover)';
-            });
-
-            suggestion.addEventListener('mouseleave', function () {
-                this.style.background = '';
-            });
-
-            suggestions.appendChild(suggestion);
-        });
-
-        input.parentNode.appendChild(suggestions);
-
-        // Posicionar sugestões
-        const rect = input.getBoundingClientRect();
-        suggestions.style.top = (rect.bottom + window.scrollY) + 'px';
-        suggestions.style.left = rect.left + 'px';
-        suggestions.style.width = rect.width + 'px';
-    }
-
-    function closeAllLists() {
-        const suggestions = document.querySelectorAll('.autocomplete-suggestions');
-        suggestions.forEach(el => el.remove());
-    }
-
-    document.addEventListener('click', function (e) {
-        if (!e.target.closest('.autocomplete-suggestions') && e.target !== input) {
-            closeAllLists();
-        }
-    });
-}
 
