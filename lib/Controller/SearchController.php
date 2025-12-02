@@ -51,32 +51,25 @@ class SearchController extends Controller
 
             $fullTextAvailable = $this->searchService->isFullTextSearchAvailable();
 
-            // LÓGICA OTIMIZADA: Sempre tentar FullTextSearch primeiro quando há busca por nome
+            // LÓGICA OTIMIZADA: Sempre tentar FullTextSearch primeiro
             $actualSearchType = 'traditional';
             $searchMethod = 'traditional';
 
-            if (!empty($filename)) {
-                // Se tem busca por nome, decidir qual método usar
-                if ($fullTextAvailable && $useFullTextSearch) {
-                    // Tentar FullTextSearch primeiro
-                    $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                    $searchMethod = 'fulltext_attempted';
+            if ($fullTextAvailable && $useFullTextSearch) {
+                // Tentar FullTextSearch primeiro
+                $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+                $searchMethod = 'fulltext_attempted';
 
-                    // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
-                    if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
-                        $actualSearchType = 'fulltext';
-                    } else {
-                        $actualSearchType = 'traditional_fallback';
-                    }
+                // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
+                if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
+                    $actualSearchType = 'fulltext';
                 } else {
-                    // Usar busca tradicional diretamente
-                    $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                    $searchMethod = 'traditional_direct';
+                    $actualSearchType = 'traditional_fallback';
                 }
             } else {
-                // Se não tem busca por nome (apenas tags ou tipo), usar sempre tradicional
+                // Usar busca tradicional diretamente
                 $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchMethod = 'traditional_no_filename';
+                $searchMethod = 'traditional_direct';
             }
 
             // Adicionar tempo de execução para debug

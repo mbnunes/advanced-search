@@ -137,9 +137,9 @@ class SearchService
     error_log('searchFilesWithFullText called with filename: ' . $filename);
     error_log('FullTextSearchManager exists: ' . ($this->fullTextSearchManager ? 'true' : 'false'));
     
-    // Se full text search não estiver disponível ou não há busca por texto, usar método tradicional
-    if (!$this->fullTextSearchManager || empty($filename)) {
-        error_log('[AdvancedSearch] Using traditional search - no manager or empty filename');
+    // Se full text search não estiver disponível, usar método tradicional
+    if (!$this->fullTextSearchManager) {
+        error_log('[AdvancedSearch] Using traditional search - no manager');
         return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
     }
 
