@@ -903,7 +903,9 @@ function setupAutocomplete(input, tags) {
 
 // Registro da aba personalizada de Metadados
 document.addEventListener('DOMContentLoaded', function() {
-    if (OCA.Files && OCA.Files.Sidebar) {
+    console.log('Advanced Search: DOMContentLoaded fired. Checking for OCA.Files.Sidebar...');
+    if (window.OCA && window.OCA.Files && window.OCA.Files.Sidebar) {
+        console.log('Advanced Search: OCA.Files.Sidebar found. Registering MetadataTab...');
         var MetadataTab = OCA.Files.Sidebar.Tab.extend({
             _file: null,
 
@@ -912,8 +914,12 @@ document.addEventListener('DOMContentLoaded', function() {
             icon: 'icon-info',
 
             initialize: function() {
+                console.log('MetadataTab initialized');
                 this._fileDataCache = {};
             },
+            
+            // ... rest of the code
+
 
             enabled: function(fileInfo) {
                 return true;
