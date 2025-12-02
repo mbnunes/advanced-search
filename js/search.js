@@ -295,15 +295,103 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function handleFileClick(event) {
         // Encontrar a linha clicada
-        const row = event.target.closest('.file-row');
+        const row = event.target.closest('.file-row') || event.target.closest('.file-card');
         if (!row) return;
 
-        const fileId = row.getAttribute('data-file-id');
-        const filePath = row.getAttribute('data-file-path');
-        const fileName = row.getAttribute('data-file-name');
-        const mimeType = row.getAttribute('data-mime-type');
+        // Recuperar dados do arquivo
+        // Como não temos o objeto completo aqui facilmente, vamos reconstruir ou buscar do cache
+        // Melhor abordagem: salvar o objeto file no elemento DOM ao criar
+        
+        // Mas para ser rápido e compatível com o código atual, vamos pegar dos atributos data
+        // e fazer uma requisição se precisar de mais detalhes, ou passar o objeto na criação
+        
+        // Vamos mudar a estratégia: displayListView e displayGridView agora salvam o objeto file no elemento
+        const fileData = row.fileData;
+        
+        if (fileData) {
+            showSidebar(fileData);
+        }
+    }
 
-        openFile(fileId, filePath, fileName, mimeType);
+    function showSidebar(file) {
+        const sidebar = document.getElementById('file-detail-sidebar');
+        const detailImage = document.getElementById('detail-image');
+        const detailIcon = document.getElementById('detail-icon');
+        const detailName = document.getElementById('detail-name');
+        const detailPath = document.getElementById('detail-path');
+        const detailSize = document.getElementById('detail-size');
+        const detailDate = document.getElementById('detail-date');
+        const detailScore = document.getElementById('detail-score');
+        const detailScoreRow = document.getElementById('detail-score-row');
+        const detailTags = document.getElementById('detail-tags');
+        const detailDownload = document.getElementById('detail-download');
+        const detailOpen = document.getElementById('detail-open');
+        const closeBtn = document.getElementById('close-sidebar');
+
+        if (!sidebar) return;
+
+        // Preencher dados
+        detailName.textContent = file.name;
+        detailPath.textContent = file.path;
+        detailPath.title = file.path;
+        detailSize.textContent = formatFileSize(file.size);
+        detailDate.textContent = new Date(file.mtime * 1000).toLocaleString();
+
+        // Score
+        if (file.score) {
+            detailScore.textContent = file.score.toFixed(2);
+            detailScoreRow.classList.remove('hidden');
+        } else {
+            detailScoreRow.classList.add('hidden');
+        }
+
+        // Tags
+        detailTags.innerHTML = '';
+        if (file.tags && file.tags.length > 0) {
+            file.tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'tag';
+                span.textContent = tag.name;
+                span.style.backgroundColor = tag.color || '#0082c9'; // Fallback color
+                detailTags.appendChild(span);
+            });
+        } else {
+            detailTags.textContent = 'Sem tags';
+        }
+
+        // Preview
+        const isImage = file.mimetype.startsWith('image/');
+        if (isImage) {
+            // Gerar URL de preview do Nextcloud
+            const previewUrl = OC.generateUrl('/core/preview/png?fileId=' + file.id + '&x=400&y=400');
+            detailImage.src = previewUrl;
+            detailImage.classList.remove('hidden');
+            detailIcon.classList.add('hidden');
+        } else {
+            detailImage.classList.add('hidden');
+            detailIcon.classList.remove('hidden');
+            
+            // Usar ícone do mime type
+            const iconClass = OC.MimeType.getIconUrl(file.mimetype);
+            detailIcon.style.backgroundImage = `url(${iconClass})`;
+        }
+
+        // Ações
+        detailDownload.href = OC.generateUrl('/apps/files/download/' + file.id);
+        detailOpen.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
+
+        // Mostrar sidebar
+        sidebar.classList.remove('hidden');
+
+        // Evento de fechar
+        closeBtn.onclick = closeSidebar;
+    }
+
+    function closeSidebar() {
+        const sidebar = document.getElementById('file-detail-sidebar');
+        if (sidebar) {
+            sidebar.classList.add('hidden');
+        }
     }
 
     function clearSearch() {
@@ -384,29 +472,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 searchIndicator = `<span class="search-score" title="Relevância: ${file.score.toFixed(2)}">⭐</span>`;
             }
 
-            html += `
-            <tr class="file-row">
+            const row = document.createElement('tr');
+            row.className = 'file-row';
+            row.fileData = file; // Anexar dados do arquivo ao elemento DOM
+            
+            row.innerHTML = `
                 <td class="filename">
-                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
-                       style="text-decoration: none; color: inherit; display: block;">
-                        <div style="display: flex; align-items: center;">
-                            <div class="file-icon ${fileIcon}"></div>
-                            <div>
-                                <div class="file-name">${escapeHtml(file.name)} ${searchIndicator}</div>
-                                <div class="file-path">${escapeHtml(file.path)}</div>
-                                ${file.excerpt ? `<div class="file-excerpt" style="font-size: 12px; color: var(--color-text-lighter); margin-top: 4px;">${escapeHtml(file.excerpt)}</div>` : ''}
-                            </div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="file-icon ${fileIcon}"></div>
+                        <div>
+                            <div class="file-name">${escapeHtml(file.name)} ${searchIndicator}</div>
+                            <div class="file-path">${escapeHtml(file.path)}</div>
+                            ${file.excerpt ? `<div class="file-excerpt" style="font-size: 12px; color: var(--color-text-lighter); margin-top: 4px;">${escapeHtml(file.excerpt)}</div>` : ''}
                         </div>
-                    </a>
-                </td>
-                <td class="filesize">
-                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
-                       style="text-decoration: none; color: inherit; display: block;">
-                        <span class="file-size">${fileSize}</span>
-                    </a>
-                </td>
-                <td class="date">
-                    <a href="${OC.generateUrl('/apps/files/?fileid=' + file.id)}" 
                        style="text-decoration: none; color: inherit; display: block;">
                         <span class="file-date">${fileDate}</span>
                     </a>
@@ -487,28 +565,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
             });
 
-            fileCard.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (isImage || isVideo) {
-		   try {
-                        const cleanPath = file.path.replace(/^\/[^\/]+\/files/, '');
-                        OCA.Viewer.open({
-                            path: cleanPath
-                        },{Sidebar:true});
-
-                    } catch (err) {
-                        console.error('Erro ao abrir viewer:', err);
-                    }
-                }else {
-                    // Fallback
-                    const fileUrl = OC.generateUrl('/apps/files/?fileid=' + file.id);
-                    window.open(fileUrl, '_blank');
-                }
-
-                
-            });
+            fileCard.fileData = file; // Anexar dados do arquivo
+            fileCard.addEventListener('click', handleFileClick);
 
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';

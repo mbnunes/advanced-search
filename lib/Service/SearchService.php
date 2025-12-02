@@ -101,6 +101,11 @@ class SearchService
                 continue;
             }
 
+            // Ignorar arquivos ocultos (começando com .)
+            if (strpos($file->getName(), '.') === 0) {
+                continue;
+            }
+
             // Filtrar por tipo de arquivo
             if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
                 continue;
@@ -187,6 +192,12 @@ class SearchService
                     
                     if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
                         $fileInfo = $nodes[0];
+                        
+                        // Ignorar arquivos ocultos (começando com .)
+                        if (strpos($fileInfo->getName(), '.') === 0) {
+                            continue;
+                        }
+
                         $candidates[] = [
                             'file' => $fileInfo,
                             'score' => $hit['_score'],
