@@ -19,6 +19,7 @@ class SearchService
     private $systemTagObjectMapper;
     private $fullTextSearchManager;
     private $appManager;
+    private $lastError = '';
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -232,7 +233,8 @@ class SearchService
             return $results;
             
         } catch (\Exception $e) {
-            $this->log("EXCEPTION in searchFilesWithFullText: " . $e->getMessage());
+            $this->lastError = "EXCEPTION in searchFilesWithFullText: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString();
+            $this->log($this->lastError);
             return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
         }
     }
@@ -563,6 +565,13 @@ class SearchService
 
         // Verificar se o manager foi injetado
         $debug['manager_exists'] = $this->fullTextSearchManager !== null;
+        
+        // Verificar erro capturado
+        $debug['last_error'] = $this->lastError;
+        
+        // Verificar CURL
+        $debug['curl_exists'] = function_exists('curl_init');
+        $debug['curl_version'] = function_exists('curl_version') ? curl_version() : 'N/A';
 
         if ($this->fullTextSearchManager) {
             try {
