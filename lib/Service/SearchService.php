@@ -9,6 +9,7 @@ use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
 use OCP\App\IAppManager;
+use OCP\FullTextSearch\IFullTextSearchManager;
 
 class SearchService
 {
