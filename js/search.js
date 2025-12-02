@@ -81,20 +81,26 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Salvar parâmetros da última busca
-        lastSearchParams = {
+        currentPage = page;
+        const offset = (page - 1) * pageSize;
+        const params = {
             filename: filename,
             tags: tags,
             tagOperator: tagOperator,
             fileType: fileType,
+            limit: pageSize,
+            offset: offset,
             useFullTextSearch: true
         };
 
-        currentPage = page;
-        const offset = (page - 1) * pageSize;
+        console.log('--- INICIANDO BUSCA ---');
+        console.log('Parâmetros:', params);
 
         // Mostrar loading
         showLoading();
+
+        // Salvar parâmetros da última busca
+        lastSearchParams = params;
 
         console.log('Enviando requisição para API:', params);
 
