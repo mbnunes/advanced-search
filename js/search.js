@@ -356,9 +356,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Tentar abrir o Viewer
                 // Passar o fileId também pode ajudar se o Viewer suportar
                 try {
-                    // O método open aceita o caminho do arquivo
-                    // Algumas versões aceitam opções como segundo argumento
-                    window.OCA.Viewer.open(cleanPath, { sidebar: true });
+                    // O método open requer um objeto na nova versão
+                    console.log('Chamando OCA.Viewer.open com objeto:', { path: cleanPath, fileId: file.id });
+                    window.OCA.Viewer.open({
+                        path: cleanPath,
+                        fileId: file.id,
+                        sidebar: true
+                    });
                 } catch (e) {
                     console.error('Erro ao chamar OCA.Viewer.open:', e);
                     // Fallback para nova aba
