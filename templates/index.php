@@ -1,14 +1,15 @@
 <?php
 script('viewer', 'viewer-init');    // Inicializa o viewer
 style('viewer', 'style');  
-script('advancedsearch', 'search');
-style('advancedsearch', 'style');
 
 // Carregar scripts do app Files para ter a sidebar
 script('files', 'sidebar');
 script('files', 'fileactions');
 script('files', 'filelist'); // Pode ser necessário
 style('files', 'files');
+
+script('advancedsearch', 'search');
+style('advancedsearch', 'style');
 ?>
 
 <div id="app">
