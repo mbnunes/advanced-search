@@ -166,7 +166,7 @@ class SearchService
             }
 
             // CHAMADA DIRETA AO ELASTICSEARCH
-            $documents = $this->searchDirectElasticsearch($filename, $limit, $offset);
+            $documents = $this->searchDirectElasticsearch($filename, $tags, $limit, $offset);
             
             $results = [];
             $userFolder = $this->rootFolder->getUserFolder($user->getUID());
@@ -603,21 +603,51 @@ class SearchService
 
         return $debug;
     }
-    private function searchDirectElasticsearch($term, $limit, $offset)
+    private function searchDirectElasticsearch($term, $tags = [], $limit = 100, $offset = 0)
     {
         $url = 'http://187.45.162.16:9200/cob2023/_search';
         
-        // Construir a query
-        // Usar wildcard para busca parcial (ex: *BASQ*)
-        // Buscar no título e conteúdo
-        $query = [
-            'from' => $offset,
-            'size' => $limit,
-            'query' => [
+        // Construir a query usando bool query para suportar filename AND tags
+        $mustClauses = [];
+
+        // 1. Busca por termo (filename/content)
+        if (!empty($term)) {
+            $mustClauses[] = [
                 'query_string' => [
                     'query' => '*' . $term . '*',
                     'fields' => ['title', 'content'],
                     'default_operator' => 'AND'
+                ]
+            ];
+        }
+
+        // 2. Busca por tags
+        if (!empty($tags)) {
+            foreach ($tags as $tag) {
+                // Usar match phrase para garantir que a tag seja encontrada
+                // Poderíamos usar 'term' em 'tags.keyword' para exatidão, mas 'match' é mais flexível
+                $mustClauses[] = [
+                    'match' => [
+                        'tags' => [
+                            'query' => $tag,
+                            'operator' => 'and'
+                        ]
+                    ]
+                ];
+            }
+        }
+
+        // Se não houver critérios, retornar vazio (ou erro)
+        if (empty($mustClauses)) {
+            return [];
+        }
+
+        $query = [
+            'from' => $offset,
+            'size' => $limit,
+            'query' => [
+                'bool' => [
+                    'must' => $mustClauses
                 ]
             ]
         ];
