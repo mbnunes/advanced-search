@@ -9,6 +9,7 @@ use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
 use OCP\App\IAppManager;
+use OCP\ILogger;
 
 class SearchService
 {
@@ -18,27 +19,33 @@ class SearchService
     private $systemTagObjectMapper;
     private $appManager;
     private $fullTextSearchManager;
+    private $logger;
 
     public function __construct(
         IRootFolder $rootFolder,
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
-        IAppManager $appManager
+        IAppManager $appManager,
+        ILogger $logger
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
         $this->appManager = $appManager;
+        $this->logger = $logger;
         
         $this->fullTextSearchManager = null;
         if (interface_exists('OCP\FullTextSearch\IFullTextSearchManager')) {
             try {
                 $this->fullTextSearchManager = \OC::$server->get('OCP\FullTextSearch\IFullTextSearchManager');
+                $this->logger->info('AdvancedSearch: FTS Manager resolved successfully.', ['app' => 'advancedsearch']);
             } catch (\Throwable $e) {
-                // FTS not available
+                $this->logger->warning('AdvancedSearch: Failed to resolve FTS Manager: ' . $e->getMessage(), ['app' => 'advancedsearch']);
             }
+        } else {
+            $this->logger->info('AdvancedSearch: FTS Interface not found.', ['app' => 'advancedsearch']);
         }
     }
 
@@ -115,6 +122,7 @@ class SearchService
             }
 
             if (!class_exists('OCP\FullTextSearch\Model\SearchRequest')) {
+                 $this->logger->warning('AdvancedSearch: SearchRequest class not found.', ['app' => 'advancedsearch']);
                  return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
             }
 
@@ -127,6 +135,7 @@ class SearchService
             $searchRequest->setSize($limit);
             $searchRequest->setProviders(['files']);
             
+            $this->logger->info('AdvancedSearch: Executing FTS search for query: ' . $query, ['app' => 'advancedsearch']);
             $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
             
             $results = [];
@@ -144,15 +153,6 @@ class SearchService
                             continue;
                         }
                         
-                        // Note: FullTextSearch might handle tags internally if configured, 
-                        // but here we are just searching by text. 
-                        // If strict tag filtering is needed on top of FTS results, uncomment below:
-                        /*
-                        if (!empty($tags) && !$this->fileMatchesTags($fileInfo->getId(), $tags, $tagOperator)) {
-                            continue;
-                        }
-                        */
-                        
                         $result = $this->formatFileResult($fileInfo);
                         $result['searchType'] = 'fulltext';
                         $result['score'] = $document->getScore();
@@ -167,6 +167,7 @@ class SearchService
             return $results;
             
         } catch (\Throwable $e) {
+            $this->logger->error('AdvancedSearch: FTS search failed: ' . $e->getMessage(), ['app' => 'advancedsearch']);
             return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
         }
     }
