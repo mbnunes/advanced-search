@@ -60,21 +60,17 @@ class SearchController extends Controller
             $actualSearchType = 'traditional';
             $searchMethod = 'traditional';
 
-            if ($fullTextAvailable && $useFullTextSearch) {
-                // Tentar FullTextSearch primeiro
-                $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchMethod = 'fulltext_attempted';
+            // LÓGICA FORÇADA: Sempre usar FullTextSearch (integração direta)
+            // Ignoramos se $fullTextAvailable é true ou false, pois estamos usando conexão direta
+            
+            $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            $searchMethod = 'fulltext_forced';
 
-                // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
-                if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
-                    $actualSearchType = 'fulltext';
-                } else {
-                    $actualSearchType = 'traditional_fallback';
-                }
+            // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
+            if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
+                $actualSearchType = 'fulltext';
             } else {
-                // Usar busca tradicional diretamente
-                $results = $this->searchService->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-                $searchMethod = 'traditional_direct';
+                $actualSearchType = 'traditional_fallback';
             }
 
             // Adicionar tempo de execução para debug
