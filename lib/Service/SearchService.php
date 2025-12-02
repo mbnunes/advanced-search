@@ -121,8 +121,13 @@ class SearchService
         }
 
         // Otimização 3: Buscar tags em lote para os arquivos da página atual
-        $fileIds = array_map(function($f) { return $f->getId(); }, $filteredResults);
-        $tagsByFileId = $this->getTagsForFiles($fileIds);
+        // SE o limite for muito alto (ex: > 200), provavelmente é uma contagem ou exportação
+        // Nesses casos, pular o carregamento de tags para performance
+        $tagsByFileId = [];
+        if ($limit <= 200) {
+            $fileIds = array_map(function($f) { return $f->getId(); }, $filteredResults);
+            $tagsByFileId = $this->getTagsForFiles($fileIds);
+        }
 
         // Formatar resultados
         foreach ($filteredResults as $file) {
@@ -197,8 +202,11 @@ class SearchService
             }
         }
         
-        // 2. Buscar tags em lote
-        $tagsByFileId = $this->getTagsForFiles($fileIds);
+        // 2. Buscar tags em lote (apenas se limite for razoável)
+        $tagsByFileId = [];
+        if ($limit <= 200) {
+            $tagsByFileId = $this->getTagsForFiles($fileIds);
+        }
         
         // 3. Filtrar e formatar
         foreach ($candidates as $candidate) {

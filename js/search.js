@@ -132,12 +132,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.log('Full text search disponível:', fullTextSearchAvailable);
                     console.log('=== DEBUG INFO ===', data.debug);
 
-                    // Para obter o total real, fazer uma busca sem limite
+                    // MOSTRAR RESULTADOS IMEDIATAMENTE
+                    displayResults(data.files || [], offset);
+                    updatePagination();
+                    updateSearchInfo(data);
+
+                    // Para obter o total real, fazer uma busca sem limite em background
                     getTotalCount(lastSearchParams).then(total => {
                         totalResults = total;
-                        displayResults(data.files || [], offset);
+                        // Atualizar apenas a info de paginação/total quando terminar
                         updatePagination();
-                        updateSearchInfo(data);
+                        if (resultCount) {
+                            resultCount.textContent = `${totalResults} arquivo${totalResults !== 1 ? 's' : ''} encontrado${totalResults !== 1 ? 's' : ''}`;
+                        }
                     });
                 } else {
                     showError(data.message || 'Erro desconhecido na busca');
