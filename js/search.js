@@ -125,7 +125,9 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json().then(err => {
+                        throw new Error(err.message || `HTTP error! status: ${response.status}`);
+                    });
                 }
                 return response.json();
             })
@@ -157,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 hideLoading();
                 console.error('Search error:', error);
-                showError('Connection error. Please try again.');
+                showError(error.message || 'Connection error. Please try again.');
             });
     }
 

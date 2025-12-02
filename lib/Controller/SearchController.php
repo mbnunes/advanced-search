@@ -69,10 +69,11 @@ class SearchController extends Controller
                     'fullTextSearchAvailable' => $fullTextAvailable,
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \OC::$server->getLogger()->error('Advanced Search Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString(), ['app' => 'advancedsearch']);
             return new JSONResponse([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage() . ' (See nextcloud.log for details)'
             ], 500);
         }
     }

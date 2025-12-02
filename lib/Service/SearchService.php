@@ -150,14 +150,14 @@ class SearchService
                         $result['excerpt'] = $document->getExcerpts();
                         $results[] = $result;
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     continue;
                 }
             }
             
             return $results;
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
         }
     }
@@ -190,7 +190,7 @@ class SearchService
 
         try {
             return $this->fullTextSearchManager->isAvailable();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return false;
         }
     }
