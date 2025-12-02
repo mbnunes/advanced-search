@@ -923,8 +923,7 @@ var ensureMetadataTabRegistered = function() {
         
         class MetadataTab extends OCA.Files.Sidebar.Tab {
             constructor() {
-                super();
-                this.id = 'advancedSearchMetadata';
+                super('advancedSearchMetadata');
                 this.name = 'Metadados';
                 this.icon = 'icon-info';
                 this._advancedSearchRegistered = true;
