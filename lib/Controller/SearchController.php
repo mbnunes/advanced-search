@@ -27,6 +27,11 @@ class SearchController extends Controller
         try {
             // Pegar dados do corpo da requisição POST
             $params = $this->request->getParams();
+            
+            // LOG DE DEBUG
+            $logFile = '/tmp/search_debug.log';
+            $timestamp = date('Y-m-d H:i:s');
+            file_put_contents($logFile, "[$timestamp] Controller: search() called\n", FILE_APPEND);
 
             $debug = $this->searchService->debugFullTextSearch();
 

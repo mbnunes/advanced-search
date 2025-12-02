@@ -38,9 +38,9 @@ class SearchService
     }
 
     private function log($message) {
-        $logFile = __DIR__ . '/../../search_debug.log';
+        $logFile = '/tmp/search_debug.log';
         $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
+        file_put_contents($logFile, "[$timestamp] Service: $message\n", FILE_APPEND);
     }
 
     private function checkFulltextSearchAvailable()
