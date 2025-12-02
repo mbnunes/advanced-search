@@ -9,8 +9,6 @@ use OCP\SystemTag\ISystemTagObjectMapper;
 use OCP\Files\Node;
 use OCP\Files\FileInfo;
 use OCP\App\IAppManager;
-use OCP\FullTextSearch\Model\SearchRequest;
-use OCP\FullTextSearch\IFullTextSearchManager;
 
 class SearchService
 {
@@ -27,7 +25,7 @@ class SearchService
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
         IAppManager $appManager,
-        ?IFullTextSearchManager $fullTextSearchManager = null
+        $fullTextSearchManager = null
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
@@ -109,7 +107,11 @@ class SearchService
                 throw new \Exception('User not logged in');
             }
 
-            $searchRequest = new SearchRequest();
+            if (!class_exists('OCP\FullTextSearch\Model\SearchRequest')) {
+                 return $this->searchFiles($query, $tags, $tagOperator, $fileType, $limit, $offset);
+            }
+
+            $searchRequest = new \OCP\FullTextSearch\Model\SearchRequest();
             $searchRequest->setSearch($query);
             $searchRequest->setAuthor($user->getUID());
             
