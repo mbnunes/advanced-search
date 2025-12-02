@@ -24,15 +24,22 @@ class SearchService
         IUserSession $userSession,
         ISystemTagManager $systemTagManager,
         ISystemTagObjectMapper $systemTagObjectMapper,
-        IAppManager $appManager,
-        $fullTextSearchManager = null
+        IAppManager $appManager
     ) {
         $this->rootFolder = $rootFolder;
         $this->userSession = $userSession;
         $this->systemTagManager = $systemTagManager;
         $this->systemTagObjectMapper = $systemTagObjectMapper;
         $this->appManager = $appManager;
-        $this->fullTextSearchManager = $fullTextSearchManager;
+        
+        $this->fullTextSearchManager = null;
+        if (interface_exists('OCP\FullTextSearch\IFullTextSearchManager')) {
+            try {
+                $this->fullTextSearchManager = \OC::$server->get('OCP\FullTextSearch\IFullTextSearchManager');
+            } catch (\Throwable $e) {
+                // FTS not available
+            }
+        }
     }
 
     public function searchFiles(string $query = '', array $tags = [], string $tagOperator = 'AND', string $fileType = '', int $limit = 100, int $offset = 0): array
