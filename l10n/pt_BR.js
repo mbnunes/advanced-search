@@ -2,8 +2,9 @@ OC.L10N.register(
     "advancedsearch",
     {
         "Search Criteria": "Critérios de Busca",
-        "File Name": "Nome do Arquivo",
-        "Enter file name...": "Digite o nome do arquivo...",
+        "Search": "Buscar",
+        "File Name": "Buscar",
+        "Enter file name...": "Buscar por nome ou #tag...",
         "Tags": "Tags",
         "Enter tags separated by comma...": "Digite as tags separadas por vírgula...",
         "Tag Operator": "Operador de Tag",

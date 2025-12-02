@@ -11,8 +11,8 @@
         "Size": "Tamanho",
         "Modified": "Modificado",
         "Tags": "Tags",
-        "File Name": "Nome do Arquivo",
-        "Enter file name...": "Digite o nome do arquivo...",
+        "File Name": "Buscar",
+        "Enter file name...": "Buscar por nome ou #tag...",
         "Enter tags separated by comma...": "Digite as tags separadas por vírgula...",
         "Tag Operator": "Operador de Tag",
         "AND (all tags)": "AND (todas as tags)",
@@ -27,7 +27,6 @@
         "Search": "Buscar",
         "Clear": "Limpar",
         "Search Results": "Resultados da Busca",
-
         "Search Criteria": "Critérios de Busca",
         "No results found": "Nenhum resultado encontrado",
         "Try adjusting your search criteria": "Tente ajustar seus critérios de busca",

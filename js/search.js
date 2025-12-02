@@ -68,15 +68,38 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function performSearch(page = 1) {
-        const filename = document.getElementById('filename').value;
-        const tagsInput = document.getElementById('tags').value;
-        const tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
+        let filenameInput = document.getElementById('filename').value;
+        const hiddenTagsInput = document.getElementById('tags').value;
+        let tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
         const fileType = document.getElementById('file-type').value;
 
-        const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        // Parse tags from filename input (e.g. "Name #tag1 #tag2")
+        let parsedTags = [];
+        
+        // Regex to find #tags (supports alphanumeric, accents, hyphens)
+        const tagRegex = /#([\w\u00C0-\u00FF-]+)/g;
+        let match;
+        
+        while ((match = tagRegex.exec(filenameInput)) !== null) {
+            parsedTags.push(match[1]);
+        }
+        
+        // Remove tags from filename to get the clean search term
+        let cleanFilename = filenameInput.replace(tagRegex, '').trim();
+        // Remove extra spaces left by removal
+        cleanFilename = cleanFilename.replace(/\s+/g, ' ');
+
+        // Combine with hidden tags input if any
+        const hiddenTags = hiddenTagsInput ? hiddenTagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        const finalTags = [...new Set([...parsedTags, ...hiddenTags])]; // Unique tags
+
+        // If we extracted tags from input, force AND operator as implied by "Search #tag"
+        if (parsedTags.length > 0) {
+            tagOperator = 'AND';
+        }
 
         // Validação básica
-        if (!filename && tags.length === 0 && !fileType) {
+        if (!cleanFilename && finalTags.length === 0 && !fileType) {
             showError('Por favor, insira pelo menos um critério de busca');
             return;
         }
@@ -84,8 +107,8 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPage = page;
         const offset = (page - 1) * pageSize;
         const params = {
-            filename: filename,
-            tags: tags,
+            filename: cleanFilename,
+            tags: finalTags,
             tagOperator: tagOperator,
             fileType: fileType,
             limit: pageSize,

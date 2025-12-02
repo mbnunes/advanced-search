@@ -22,16 +22,17 @@ style('advancedsearch', 'style');
                 
                 <div class="search-form">
                     <div class="form-group">
-                        <label for="filename"><?php p($l->t('File Name')); ?>:</label>
-                        <input type="text" id="filename" class="input-field" placeholder="<?php p($l->t('Enter file name...')); ?>">
+                        <label for="filename"><?php p($l->t('Search')); ?>:</label>
+                        <input type="text" id="filename" class="input-field" placeholder="<?php p($l->t('Search by name or #tag...')); ?>">
                     </div>
                     
-                    <div class="form-group">
+                    <!-- Hidden fields for backward compatibility or future advanced toggle -->
+                    <div class="form-group" style="display: none;">
                         <label for="tags"><?php p($l->t('Tags')); ?>:</label>
                         <input type="text" id="tags" class="input-field" placeholder="<?php p($l->t('Enter tags separated by comma...')); ?>">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" style="display: none;">
                         <label><?php p($l->t('Tag Operator')); ?>:</label>
                         <div class="radio-group">
                             <label>
