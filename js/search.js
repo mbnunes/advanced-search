@@ -294,61 +294,84 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleFileClick(event) {
+        console.log('handleFileClick chamado');
         // Encontrar a linha clicada
         const row = event.target.closest('.file-row') || event.target.closest('.file-card');
-        if (!row) return;
+        if (!row) {
+            console.log('Nenhuma linha encontrada');
+            return;
+        }
 
         const file = row.fileData;
-        if (!file) return;
+        if (!file) {
+            console.log('Nenhum dado de arquivo encontrado na linha');
+            return;
+        }
+
+        console.log('Arquivo clicado:', file);
 
         const isImage = file.mimetype.startsWith('image/');
         const isVideo = file.mimetype.startsWith('video/');
 
         if (isImage || isVideo) {
+            console.log('É imagem ou vídeo. Tentando abrir Viewer.');
             // Abrir com Viewer nativo
-            if (OCA && OCA.Viewer) {
-                // O Viewer espera o caminho relativo ao root do usuário
-                // Ex: /Fotos/imagem.jpg
-                // O file.path vem como /files/USER/Fotos/imagem.jpg ou similar
-                // Precisamos limpar
-                
-                // Tentar remover o prefixo comum /files/USER/
-                // Mas o mais seguro é pegar o caminho relativo se disponível, ou limpar manualmente
+            if (window.OCA && window.OCA.Viewer) {
+                console.log('OCA.Viewer disponível');
                 
                 let cleanPath = file.path;
                 
-                // Regex para remover /files/USERNAME/ ou /admin/files/
-                // O padrão costuma ser /index.php/apps/files/ajax/download.php?dir=/&files=...
-                // Mas aqui temos o path físico ou virtual
+                // Lógica de limpeza de caminho
+                // O Viewer precisa do caminho relativo ao root do usuário (ex: /Fotos/img.jpg)
+                // O file.path pode vir como /files/USER/Fotos/img.jpg
                 
-                // Vamos assumir que o path começa com /files/USER/ ou algo assim
-                // Uma forma segura é remover tudo até o terceiro slash se começar com /
-                
-                // Melhor: usar o OC.currentUser
-                const userPrefix = '/' + OC.currentUser + '/files';
-                if (cleanPath.includes(userPrefix)) {
-                    cleanPath = cleanPath.substring(cleanPath.indexOf(userPrefix) + userPrefix.length);
-                } else {
-                    // Fallback genérico: remover os 3 primeiros segmentos se parecer caminho absoluto
-                    // Ex: /admin/files/Pasta -> /Pasta
-                    const parts = cleanPath.split('/');
-                    if (parts.length > 3 && (parts[1] === 'files' || parts[2] === 'files')) {
-                         // Heurística: encontrar onde está o 'files' e pegar o que vem depois do user
-                         const filesIndex = parts.indexOf('files');
-                         if (filesIndex !== -1 && parts.length > filesIndex + 2) {
-                             cleanPath = '/' + parts.slice(filesIndex + 2).join('/');
-                         }
+                // Tentar usar o OC.currentUser se disponível
+                if (window.OC && window.OC.currentUser) {
+                    const userFilesPrefix = '/' + window.OC.currentUser + '/files';
+                    if (cleanPath.includes(userFilesPrefix)) {
+                        cleanPath = cleanPath.substring(cleanPath.indexOf(userFilesPrefix) + userFilesPrefix.length);
                     }
                 }
                 
-                console.log('Abrindo Viewer para:', cleanPath);
+                // Fallback: se ainda parecer ter prefixos de sistema, tentar limpar
+                // Ex: /admin/files/Pasta -> /Pasta
+                const parts = cleanPath.split('/');
+                if (parts.length > 3 && (parts[1] === 'files' || parts[2] === 'files')) {
+                     // Heurística: encontrar onde está o 'files' e pegar o que vem depois do user
+                     const filesIndex = parts.indexOf('files');
+                     if (filesIndex !== -1 && parts.length > filesIndex + 2) {
+                         // parts[filesIndex] é 'files'
+                         // parts[filesIndex+1] é o usuário
+                         // O resto é o caminho
+                         const potentialPath = '/' + parts.slice(filesIndex + 2).join('/');
+                         // Só usar se for mais curto que o original
+                         if (potentialPath.length < cleanPath.length) {
+                             cleanPath = potentialPath;
+                         }
+                     }
+                }
+
+                console.log('Caminho limpo para o Viewer:', cleanPath);
                 
-                OCA.Viewer.open(cleanPath);
+                // Tentar abrir o Viewer
+                // Passar o fileId também pode ajudar se o Viewer suportar
+                try {
+                    // O método open aceita o caminho do arquivo
+                    // Algumas versões aceitam opções como segundo argumento
+                    window.OCA.Viewer.open(cleanPath, { sidebar: true });
+                } catch (e) {
+                    console.error('Erro ao chamar OCA.Viewer.open:', e);
+                    // Fallback para nova aba
+                    window.open(OC.generateUrl('/apps/files/?fileid=' + file.id), '_blank');
+                }
             } else {
-                console.error('OCA.Viewer não disponível');
+                console.error('OCA.Viewer não disponível (window.OCA.Viewer undefined)');
+                console.log('window.OCA:', window.OCA);
+                // Fallback
                 window.open(OC.generateUrl('/apps/files/?fileid=' + file.id), '_blank');
             }
         } else {
+            console.log('Não é imagem/vídeo. Redirecionando para Files.');
             // Para outros arquivos, abrir na visualização de arquivos
             window.location.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
         }

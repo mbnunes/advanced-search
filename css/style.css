@@ -496,7 +496,8 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: hidden; /* Importante para não ter scroll duplo */
+    overflow: hidden;
+    width: calc(100% - 300px); /* Garantir largura correta */
 }
 
 #app-content-wrapper {
