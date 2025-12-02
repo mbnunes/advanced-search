@@ -585,7 +585,7 @@ class SearchService
     }
     private function searchDirectElasticsearch($term, $limit, $offset)
     {
-        $url = 'http://187.45.162.16:9200/cob2023/_search';
+        $url = 'http://localhost:9200/cob2023/_search';
         
         // Construir a query
         // Usar wildcard para busca parcial (ex: *BASQ*)
