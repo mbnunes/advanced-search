@@ -96,41 +96,35 @@ document.addEventListener('DOMContentLoaded', function () {
         // Mostrar loading
         showLoading();
 
+        console.log('Enviando requisição para API:', params);
+
         fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'requesttoken': OC.requestToken
             },
-            body: JSON.stringify({
-                filename: filename,
-                tags: tags,
-                tagOperator: tagOperator,
-                fileType: fileType,
-                limit: pageSize,
-                offset: offset,
-                useFullTextSearch: true
-            })
+            body: JSON.stringify(params)
         })
             .then(response => {
+                console.log('Resposta recebida. Status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
+                console.log('Dados decodificados:', data);
                 hideLoading();
                 if (data.success) {
+                    console.log('Busca com sucesso. Arquivos encontrados:', data.files ? data.files.length : 0);
+                    
                     // Salvar tipo de busca usado e disponibilidade
                     lastSearchType = data.searchType || 'traditional';
                     fullTextSearchAvailable = data.fullTextSearchAvailable || false;
 
-                    console.log('Tipo de data.files:', typeof data.files);
-                    console.log('data.files é um array?', Array.isArray(data.files));
-                    console.log('Conteúdo de data.files:', data.files);
-                    console.log('Tipo de busca usado:', lastSearchType);
-                    console.log('Full text search disponível:', fullTextSearchAvailable);
-                    console.log('=== DEBUG INFO ===', data.debug);
+                    console.log('Tipo de busca reportado pelo backend:', data.searchInfo ? data.searchInfo.actualSearchType : 'N/A');
+                    console.log('Debug do backend:', data.debug);
 
                     // MOSTRAR RESULTADOS IMEDIATAMENTE
                     displayResults(data.files || [], offset);
@@ -138,7 +132,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     updateSearchInfo(data);
 
                     // Para obter o total real, fazer uma busca sem limite em background
+                    console.log('Iniciando contagem total em background...');
                     getTotalCount(lastSearchParams).then(total => {
+                        console.log('Contagem total finalizada:', total);
                         totalResults = total;
                         // Atualizar apenas a info de paginação/total quando terminar
                         updatePagination();
@@ -147,12 +143,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
                 } else {
+                    console.error('Erro reportado pela API:', data.message);
                     showError(data.message || 'Erro desconhecido na busca');
                 }
             })
             .catch(error => {
                 hideLoading();
-                console.error('Erro na busca:', error);
+                console.error('ERRO FATAL NA BUSCA:', error);
                 showError('Erro de conexão. Tente novamente.');
             });
     }
