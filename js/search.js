@@ -901,3 +901,115 @@ function setupAutocomplete(input, tags) {
     });
 }
 
+// Registro da aba personalizada de Metadados
+document.addEventListener('DOMContentLoaded', function() {
+    if (OCA.Files && OCA.Files.Sidebar) {
+        var MetadataTab = OCA.Files.Sidebar.Tab.extend({
+            _file: null,
+
+            id: 'advancedSearchMetadata',
+            name: 'Metadados',
+            icon: 'icon-info',
+
+            initialize: function() {
+                this._fileDataCache = {};
+            },
+
+            enabled: function(fileInfo) {
+                return true;
+            },
+
+            mount: function(el, fileInfo, context) {
+                this._file = fileInfo;
+                var self = this;
+                var $el = $(el);
+                
+                $el.addClass('advanced-search-metadata-tab');
+                $el.html('<div class="icon-loading"></div>');
+
+                var fileId = fileInfo.id;
+                var fileData = this._findFileData(fileId);
+
+                if (fileData) {
+                    this._renderContent($el, fileData);
+                } else {
+                    this._renderContent($el, {
+                        name: fileInfo.name,
+                        path: fileInfo.path || fileInfo.dir + '/' + fileInfo.name,
+                        size: fileInfo.size,
+                        mtime: fileInfo.mtime ? fileInfo.mtime / 1000 : null,
+                        mimetype: fileInfo.mimetype
+                    });
+                }
+            },
+
+            update: function(fileInfo) {
+                this._file = fileInfo;
+            },
+
+            _findFileData: function(fileId) {
+                var row = document.querySelector('.file-row[data-id="' + fileId + '"]') || 
+                          document.querySelector('.file-card[data-id="' + fileId + '"]');
+                
+                if (row && row.fileData) {
+                    return row.fileData;
+                }
+                
+                var rows = document.querySelectorAll('.file-row, .file-card');
+                for (var i = 0; i < rows.length; i++) {
+                    if (rows[i].fileData && rows[i].fileData.id == fileId) {
+                        return rows[i].fileData;
+                    }
+                }
+                
+                return null;
+            },
+
+            _renderContent: function($el, data) {
+                var html = '<div class="metadata-list">';
+                
+                html += this._renderRow('Nome', data.name);
+                
+                var cleanPath = data.path;
+                if (OC && OC.currentUser) {
+                    var userPrefix = '/' + OC.currentUser + '/files';
+                    if (cleanPath && cleanPath.includes(userPrefix)) {
+                        cleanPath = cleanPath.substring(cleanPath.indexOf(userPrefix) + userPrefix.length);
+                    }
+                }
+                html += this._renderRow('Caminho', cleanPath);
+                
+                html += this._renderRow('Tamanho', formatFileSize(data.size));
+                
+                if (data.mtime) {
+                    html += this._renderRow('Modificado', new Date(data.mtime * 1000).toLocaleString());
+                }
+                
+                if (data.score) {
+                    html += this._renderRow('Relevância', data.score.toFixed(2));
+                }
+                
+                if (data.tags && data.tags.length > 0) {
+                    var tagsHtml = data.tags.map(function(t) { return t.name; }).join(', ');
+                    html += this._renderRow('Tags', tagsHtml);
+                } else {
+                    html += this._renderRow('Tags', 'Sem tags');
+                }
+                
+                html += '</div>';
+                $el.html(html);
+            },
+
+            _renderRow: function(label, value) {
+                if (!value) return '';
+                return '<div class="metadata-row">' +
+                       '<div class="metadata-label">' + escapeHtml(label) + '</div>' +
+                       '<div class="metadata-value" title="' + escapeHtml(value) + '">' + escapeHtml(value) + '</div>' +
+                       '</div>';
+            }
+        });
+
+        OCA.Files.Sidebar.registerTab(new MetadataTab());
+    }
+});
+

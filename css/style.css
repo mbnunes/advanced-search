@@ -845,3 +845,41 @@
 .grid-view #filestable tr {
     display: none;
 }
+
+/* Custom Metadata Tab Styles */
+.advanced-search-metadata-tab {
+    padding: 15px;
+}
+
+.metadata-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.metadata-row {
+    display: flex;
+    flex-direction: column; /* Stack label and value vertically like the reference */
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 8px;
+}
+
+.metadata-row:last-child {
+    border-bottom: none;
+}
+
+.metadata-label {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--color-text-maxcontrast);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.metadata-value {
+    font-size: 14px;
+    color: var(--color-text-main);
+    word-break: break-word;
+    line-height: 1.4;
+}
