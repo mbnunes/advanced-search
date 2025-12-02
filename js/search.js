@@ -495,12 +495,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 16px;
-        padding: 16px;
-        width: 100%;
-    `;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            padding: 16px;
+            width: 100%;
+        `;
 
         for (const file of files) {
             const isImage = file.mimetype?.startsWith('image/');
@@ -510,17 +510,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
             fileCard.style.cssText = `
-            background: var(--color-background-hover);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            position: relative;
-        `;
+                background: var(--color-background-hover);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                transition: transform 0.2s, box-shadow 0.2s;
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                position: relative;
+            `;
 
             // Indicador de relevância
             if (file.searchType === 'fulltext' && file.score) {
@@ -529,16 +529,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 scoreIndicator.innerHTML = '⭐';
                 scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
                 scoreIndicator.style.cssText = `
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                background: rgba(0,0,0,0.7);
-                color: white;
-                padding: 4px;
-                border-radius: 4px;
-                font-size: 12px;
-                z-index: 1;
-            `;
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: rgba(0,0,0,0.7);
+                    color: var(--color-text-light);
+                    padding: 4px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1;
+                `;
                 fileCard.appendChild(scoreIndicator);
             }
 
@@ -558,13 +558,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
             thumbnailArea.style.cssText = `
-            height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-background-dark);
-            position: relative;
-        `;
+                height: 150px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--color-background-dark);
+                position: relative;
+            `;
 
             if (hasThumbnail) {
                 const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
@@ -581,25 +581,25 @@ document.addEventListener('DOMContentLoaded', function () {
             const infoArea = document.createElement('div');
             infoArea.className = 'info-area';
             infoArea.style.cssText = `
-            padding: 12px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        `;
+                padding: 12px;
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+            `;
 
             const fileName = document.createElement('div');
             fileName.className = 'file-name';
             fileName.textContent = file.name;
             fileName.style.cssText = `
-            font-weight: bold;
-            margin-bottom: 8px;
-            word-break: break-word;
-            white-space: normal;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        `;
+                font-weight: bold;
+                margin-bottom: 8px;
+                word-break: break-word;
+                white-space: normal;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            `;
 
             const fileDate = document.createElement('div');
             fileDate.className = 'file-date';
@@ -902,11 +902,19 @@ function setupAutocomplete(input, tags) {
 }
 
 // Registro da aba personalizada de Metadados
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Advanced Search: DOMContentLoaded fired. Checking for OCA.Files.Sidebar...');
+var registerMetadataTab = function() {
+    console.log('Search: Attempting to register MetadataTab...');
+    
     if (window.OCA && window.OCA.Files && window.OCA.Files.Sidebar) {
-        console.log('Advanced Search: OCA.Files.Sidebar found. Registering MetadataTab...');
+        console.log('Search: OCA.Files.Sidebar found. Registering MetadataTab...');
         
+        // Evitar registrar duas vezes
+        if (OCA.Files.Sidebar.Tab.prototype._advancedSearchRegistered) {
+             console.log('MetadataTab already registered.');
+             return;
+        }
+        OCA.Files.Sidebar.Tab.prototype._advancedSearchRegistered = true;
+
         // Definição simplificada para debug
         var MetadataTab = OCA.Files.Sidebar.Tab.extend({
             id: 'advancedSearchMetadata',
@@ -946,6 +954,15 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error registering MetadataTab:', e);
         }
+    } else {
+        console.error('Search: OCA.Files.Sidebar NOT found. Dependencies missing?');
+        console.log('window.OCA:', window.OCA);
+        if (window.OCA) console.log('window.OCA.Files:', window.OCA.Files);
     }
-});
+};
 
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', registerMetadataTab);
+} else {
+    registerMetadataTab();
+}

@@ -490,7 +490,7 @@
 
 
 #app-content {
-    margin-left: 300px;
+    margin-left: 0px;
     height: 100%;
     background: var(--color-main-background);
     display: flex;
@@ -529,13 +529,13 @@
     }
 
     .pagination-wrapper {
-        flex-direction: column;
+        /* flex-direction: column; */
         gap: 15px;
-        align-items: stretch;
+        align-items: center;
     }
 
     .pagination-controls {
-        flex-direction: column;
+        /* flex-direction: column; */
         width: 100%;
     }
 

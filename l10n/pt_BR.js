@@ -1,7 +1,6 @@
 OC.L10N.register(
     "advancedsearch",
     {
-        "Advanced Search": "Busca Avançada",
         "Search Criteria": "Critérios de Busca",
         "File Name": "Nome do Arquivo",
         "Enter file name...": "Digite o nome do arquivo...",

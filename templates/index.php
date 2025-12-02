@@ -15,7 +15,7 @@ style('advancedsearch', 'style');
 <div id="app">
     <div id="app-navigation">
         <div class="app-navigation-new">
-            <h2><?php p($l->t('Advanced Search')); ?></h2>
+            <h2><?php p($l->t('Search')); ?></h2>
         </div>
         
         <div class="search-sidebar">

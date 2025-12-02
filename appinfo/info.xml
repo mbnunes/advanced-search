@@ -2,17 +2,17 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>advancedsearch</id>
-    <name>Advanced Search</name>
+    <name>Search</name>
     <summary>Advanced file search with tags and logical operators</summary>
     <description>Search files by name and multiple tags using AND/OR operators</description>
-    <version>1.0.16</version>
+    <version>1.0.17</version>
     <licence>bsd</licence>
     <author>Mauricio Nunes</author>
     <namespace>AdvancedSearch</namespace>
     <category>files</category>
     <navigations>
         <navigation>
-            <name>Advanced Search</name>
+            <name>Search</name>
             <route>advancedsearch.page.index</route>
             <icon>app.svg</icon>
             <order>10</order>
