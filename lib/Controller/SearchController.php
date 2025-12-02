@@ -7,22 +7,25 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\IRequest;
 use OCA\AdvancedSearch\Service\SearchService;
-use OCP\SystemTag\ISystemTagManager;
+use OCP\ILogger;
 
 class SearchController extends Controller
 {
     private $searchService;
     private $systemTagManager;
+    private $logger;
 
     public function __construct(
         string $AppName,
         IRequest $request,
         SearchService $searchService,
-        ISystemTagManager $systemTagManager
+        ISystemTagManager $systemTagManager,
+        ILogger $logger
     ) {
         parent::__construct($AppName, $request);
         $this->searchService = $searchService;
         $this->systemTagManager = $systemTagManager;
+        $this->logger = $logger;
     }
 
     #[NoAdminRequired]
@@ -70,7 +73,7 @@ class SearchController extends Controller
                 ]
             ]);
         } catch (\Throwable $e) {
-            \OC::$server->getLogger()->error('Advanced Search Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString(), ['app' => 'advancedsearch']);
+            $this->logger->error('Advanced Search Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString(), ['app' => 'advancedsearch']);
             return new JSONResponse([
                 'success' => false,
                 'message' => $e->getMessage() . ' (See nextcloud.log for details)'
