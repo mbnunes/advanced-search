@@ -149,30 +149,18 @@ class SearchService
         $this->log("searchFilesWithFullText START. Filename: '$filename'");
         
         // Se full text search não estiver disponível, usar método tradicional
-        if (!$this->fullTextSearchManager) {
-            $this->log("No FullTextSearchManager. Falling back to traditional.");
-            return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
-        }
+        // AGORA: Tentar conexão direta mesmo sem manager
+        // if (!$this->fullTextSearchManager) { ... }
 
         try {
-            $this->log("Preparing SearchRequest...");
+            $this->log("Preparing Direct SearchRequest...");
             $user = $this->userSession->getUser();
             if (!$user) {
                 throw new \Exception('User not logged in');
             }
 
-            $searchRequest = new \OCP\FullTextSearch\Model\SearchRequest();
-            $searchRequest->setSearch($filename);
-            $searchRequest->setAuthor($user->getUID());
-            
-            $page = floor($offset / $limit) + 1;
-            $searchRequest->setPage($page);
-            $searchRequest->setSize($limit);
-            $searchRequest->setProviders(['files']);
-            
-            $this->log("Executing search on manager...");
-            $searchResult = $this->fullTextSearchManager->search($user->getUID(), $searchRequest);
-            $this->log("Search executed. Processing documents...");
+            // CHAMADA DIRETA AO ELASTICSEARCH
+            $documents = $this->searchDirectElasticsearch($filename, $limit, $offset);
             
             $results = [];
             $userFolder = $this->rootFolder->getUserFolder($user->getUID());
@@ -180,26 +168,33 @@ class SearchService
             $candidates = [];
             $fileIds = [];
             
-            $documents = $searchResult->getDocuments();
-            $this->log("Found " . count($documents) . " documents.");
-
-            foreach ($documents as $document) {
+            foreach ($documents as $hit) {
                 try {
-                    $fileId = (int) $document->getId();
-                    // $this->log("Processing doc ID: $fileId"); // Comentado para não spammar
+                    // O ID vem como "files:12345", precisamos extrair o número
+                    $elasticId = $hit['_id'];
+                    $fileId = 0;
+                    
+                    if (strpos($elasticId, 'files:') === 0) {
+                        $fileId = (int) substr($elasticId, 6);
+                    } else {
+                        $fileId = (int) $elasticId;
+                    }
+
+                    if ($fileId === 0) continue;
+
                     $nodes = $userFolder->getById($fileId);
                     
                     if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
                         $fileInfo = $nodes[0];
                         $candidates[] = [
                             'file' => $fileInfo,
-                            'score' => $document->getScore(),
-                            'excerpt' => $document->getExcerpts()
+                            'score' => $hit['_score'],
+                            'excerpt' => '' // Excerpt não vem fácil no direct hit sem highlight
                         ];
                         $fileIds[] = $fileId;
                     }
                 } catch (\Exception $e) {
-                    $this->log("Error processing doc: " . $e->getMessage());
+                    $this->log("Error processing hit: " . $e->getMessage());
                     continue;
                 }
             }
