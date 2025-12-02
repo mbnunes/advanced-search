@@ -298,99 +298,59 @@ document.addEventListener('DOMContentLoaded', function () {
         const row = event.target.closest('.file-row') || event.target.closest('.file-card');
         if (!row) return;
 
-        // Recuperar dados do arquivo
-        // Como não temos o objeto completo aqui facilmente, vamos reconstruir ou buscar do cache
-        // Melhor abordagem: salvar o objeto file no elemento DOM ao criar
-        
-        // Mas para ser rápido e compatível com o código atual, vamos pegar dos atributos data
-        // e fazer uma requisição se precisar de mais detalhes, ou passar o objeto na criação
-        
-        // Vamos mudar a estratégia: displayListView e displayGridView agora salvam o objeto file no elemento
-        const fileData = row.fileData;
-        
-        if (fileData) {
-            showSidebar(fileData);
-        }
-    }
+        const file = row.fileData;
+        if (!file) return;
 
-    function showSidebar(file) {
-        const sidebar = document.getElementById('file-detail-sidebar');
-        const detailImage = document.getElementById('detail-image');
-        const detailIcon = document.getElementById('detail-icon');
-        const detailName = document.getElementById('detail-name');
-        const detailPath = document.getElementById('detail-path');
-        const detailSize = document.getElementById('detail-size');
-        const detailDate = document.getElementById('detail-date');
-        const detailScore = document.getElementById('detail-score');
-        const detailScoreRow = document.getElementById('detail-score-row');
-        const detailTags = document.getElementById('detail-tags');
-        const detailDownload = document.getElementById('detail-download');
-        const detailOpen = document.getElementById('detail-open');
-        const closeBtn = document.getElementById('close-sidebar');
-
-        if (!sidebar) return;
-
-        // Preencher dados
-        detailName.textContent = file.name;
-        detailPath.textContent = file.path;
-        detailPath.title = file.path;
-        detailSize.textContent = formatFileSize(file.size);
-        detailDate.textContent = new Date(file.mtime * 1000).toLocaleString();
-
-        // Score
-        if (file.score) {
-            detailScore.textContent = file.score.toFixed(2);
-            detailScoreRow.classList.remove('hidden');
-        } else {
-            detailScoreRow.classList.add('hidden');
-        }
-
-        // Tags
-        detailTags.innerHTML = '';
-        if (file.tags && file.tags.length > 0) {
-            file.tags.forEach(tag => {
-                const span = document.createElement('span');
-                span.className = 'tag';
-                span.textContent = tag.name;
-                span.style.backgroundColor = tag.color || '#0082c9'; // Fallback color
-                detailTags.appendChild(span);
-            });
-        } else {
-            detailTags.textContent = 'Sem tags';
-        }
-
-        // Preview
         const isImage = file.mimetype.startsWith('image/');
-        if (isImage) {
-            // Gerar URL de preview do Nextcloud
-            const previewUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=400&y=400&a=true');
-            detailImage.src = previewUrl;
-            detailImage.classList.remove('hidden');
-            detailIcon.classList.add('hidden');
+        const isVideo = file.mimetype.startsWith('video/');
+
+        if (isImage || isVideo) {
+            // Abrir com Viewer nativo
+            if (OCA && OCA.Viewer) {
+                // O Viewer espera o caminho relativo ao root do usuário
+                // Ex: /Fotos/imagem.jpg
+                // O file.path vem como /files/USER/Fotos/imagem.jpg ou similar
+                // Precisamos limpar
+                
+                // Tentar remover o prefixo comum /files/USER/
+                // Mas o mais seguro é pegar o caminho relativo se disponível, ou limpar manualmente
+                
+                let cleanPath = file.path;
+                
+                // Regex para remover /files/USERNAME/ ou /admin/files/
+                // O padrão costuma ser /index.php/apps/files/ajax/download.php?dir=/&files=...
+                // Mas aqui temos o path físico ou virtual
+                
+                // Vamos assumir que o path começa com /files/USER/ ou algo assim
+                // Uma forma segura é remover tudo até o terceiro slash se começar com /
+                
+                // Melhor: usar o OC.currentUser
+                const userPrefix = '/' + OC.currentUser + '/files';
+                if (cleanPath.includes(userPrefix)) {
+                    cleanPath = cleanPath.substring(cleanPath.indexOf(userPrefix) + userPrefix.length);
+                } else {
+                    // Fallback genérico: remover os 3 primeiros segmentos se parecer caminho absoluto
+                    // Ex: /admin/files/Pasta -> /Pasta
+                    const parts = cleanPath.split('/');
+                    if (parts.length > 3 && (parts[1] === 'files' || parts[2] === 'files')) {
+                         // Heurística: encontrar onde está o 'files' e pegar o que vem depois do user
+                         const filesIndex = parts.indexOf('files');
+                         if (filesIndex !== -1 && parts.length > filesIndex + 2) {
+                             cleanPath = '/' + parts.slice(filesIndex + 2).join('/');
+                         }
+                    }
+                }
+                
+                console.log('Abrindo Viewer para:', cleanPath);
+                
+                OCA.Viewer.open(cleanPath);
+            } else {
+                console.error('OCA.Viewer não disponível');
+                window.open(OC.generateUrl('/apps/files/?fileid=' + file.id), '_blank');
+            }
         } else {
-            detailImage.classList.add('hidden');
-            detailIcon.classList.remove('hidden');
-            
-            // Usar ícone do mime type
-            const iconClass = OC.MimeType.getIconUrl(file.mimetype);
-            detailIcon.style.backgroundImage = `url(${iconClass})`;
-        }
-
-        // Ações
-        detailDownload.href = OC.generateUrl('/apps/files/download/' + file.id);
-        detailOpen.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
-
-        // Mostrar sidebar
-        sidebar.classList.remove('hidden');
-
-        // Evento de fechar
-        closeBtn.onclick = closeSidebar;
-    }
-
-    function closeSidebar() {
-        const sidebar = document.getElementById('file-detail-sidebar');
-        if (sidebar) {
-            sidebar.classList.add('hidden');
+            // Para outros arquivos, abrir na visualização de arquivos
+            window.location.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
         }
     }
 

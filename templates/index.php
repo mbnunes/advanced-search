@@ -163,44 +163,6 @@ style('advancedsearch', 'style');
             
         </div>
         
-        <div id="file-detail-sidebar" class="hidden">
-            <div class="sidebar-header">
-                <h3><?php p($l->t('Details')); ?></h3>
-                <button id="close-sidebar" class="icon-close" title="<?php p($l->t('Close')); ?>"></button>
-            </div>
-            <div class="sidebar-content">
-                <div class="detail-preview">
-                    <img id="detail-image" src="" alt="Preview">
-                    <div id="detail-icon" class="hidden"></div>
-                </div>
-                <div class="detail-info">
-                    <div class="detail-row">
-                        <label><?php p($l->t('Name')); ?>:</label>
-                        <span id="detail-name"></span>
-                    </div>
-                    <div class="detail-row">
-                        <label><?php p($l->t('Path')); ?>:</label>
-                        <span id="detail-path" title=""></span>
-                    </div>
-                    <div class="detail-row">
-                        <label><?php p($l->t('Size')); ?>:</label>
-                        <span id="detail-size"></span>
-                    </div>
-                    <div class="detail-row">
-                        <label><?php p($l->t('Modified')); ?>:</label>
-                        <span id="detail-date"></span>
-                    </div>
-                    <div class="detail-row hidden" id="detail-score-row">
-                        <label><?php p($l->t('Relevance')); ?>:</label>
-                        <span id="detail-score"></span>
-                    </div>
-                    <div class="detail-tags" id="detail-tags"></div>
-                </div>
-                <div class="detail-actions">
-                    <a id="detail-download" href="#" class="button primary"><?php p($l->t('Download')); ?></a>
-                    <a id="detail-open" href="#" class="button"><?php p($l->t('Open Location')); ?></a>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
