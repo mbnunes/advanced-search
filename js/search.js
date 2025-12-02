@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const isImage = file.mimetype.startsWith('image/');
         if (isImage) {
             // Gerar URL de preview do Nextcloud
-            const previewUrl = OC.generateUrl('/core/preview/png?fileId=' + file.id + '&x=400&y=400');
+            const previewUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=400&y=400&a=true');
             detailImage.src = previewUrl;
             detailImage.classList.remove('hidden');
             detailIcon.classList.add('hidden');

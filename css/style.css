@@ -489,18 +489,24 @@
 }
 
 
-/* Responsividade */
-@media (max-width: 768px) {
-    #app-navigation {
-        width: 100%;
-        position: relative;
-        height: auto;
-    }
+#app-content {
+    margin-left: 300px;
+    height: 100%;
+    background: var(--color-main-background);
+    display: flex;
+    flex-direction: row; /* Garantir que seja linha para sidebar ficar ao lado */
+    position: relative;
+    overflow: hidden; /* Importante para não ter scroll duplo */
+}
 
-    #app-content {
-        margin-left: 0;
-        height: auto;
-    }
+#app-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-width: 0; /* Evita que o flex item cresça além do container */
+}
 
     .files-controls {
         flex-direction: column;
