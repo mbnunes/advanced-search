@@ -919,21 +919,24 @@ var ensureMetadataTabRegistered = function() {
         
         console.log('Search: Registering MetadataTab now...');
         
-        var MetadataTab = OCA.Files.Sidebar.Tab.extend({
-            id: 'advancedSearchMetadata',
-            name: 'Metadados',
-            icon: 'icon-info',
-            
-            initialize: function() {
+        console.log('Search: Registering MetadataTab now...');
+        
+        class MetadataTab extends OCA.Files.Sidebar.Tab {
+            constructor() {
+                super();
+                this.id = 'advancedSearchMetadata';
+                this.name = 'Metadados';
+                this.icon = 'icon-info';
+                this._advancedSearchRegistered = true;
                 console.log('MetadataTab initialized');
-            },
+            }
 
-            enabled: function(fileInfo) {
+            enabled(fileInfo) {
                 console.log('MetadataTab.enabled called');
                 return true;
-            },
+            }
 
-            mount: function(el, fileInfo, context) {
+            mount(el, fileInfo, context) {
                 console.log('MetadataTab.mount called');
                 var $el = $(el);
                 $el.addClass('advanced-search-metadata-tab');
@@ -971,13 +974,13 @@ var ensureMetadataTabRegistered = function() {
                         mimetype: fileInfo.mimetype
                     });
                 }
-            },
+            }
 
-            update: function(fileInfo) {
+            update(fileInfo) {
                 console.log('MetadataTab.update called');
-            },
+            }
             
-            _renderContent: function($el, data) {
+            _renderContent($el, data) {
                 var html = '<div class="metadata-list">';
                 
                 html += this._renderRow('Nome', data.name);
@@ -1010,16 +1013,16 @@ var ensureMetadataTabRegistered = function() {
                 
                 html += '</div>';
                 $el.html(html);
-            },
+            }
 
-            _renderRow: function(label, value) {
+            _renderRow(label, value) {
                 if (!value) return '';
                 return '<div class="metadata-row">' +
                        '<div class="metadata-label">' + escapeHtml(label) + '</div>' +
                        '<div class="metadata-value" title="' + escapeHtml(value) + '">' + escapeHtml(value) + '</div>' +
                        '</div>';
             }
-        });
+        }
 
         try {
             OCA.Files.Sidebar.registerTab(new MetadataTab());
