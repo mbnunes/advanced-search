@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const viewListBtn = document.getElementById('view-list');
     const viewGridBtn = document.getElementById('view-grid');
     const fileTable = document.getElementById('filestable');
+    const filenameInput = document.getElementById('filename'); // Reference for autocomplete
 
     // Elementos de paginação
     const pagination = document.getElementById('pagination');
@@ -35,6 +36,10 @@ document.addEventListener('DOMContentLoaded', function () {
     let lastSearchParams = null;
     let fullTextSearchAvailable = true;
     let lastSearchType = 'traditional';
+    let availableTags = []; // Store fetched tags
+
+    // Fetch tags on load
+    fetchTags();
 
     // Event listeners - apenas adicionar se o elemento existir
     if (searchBtn) searchBtn.addEventListener('click', () => performSearch(1));
@@ -67,25 +72,157 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Autocomplete Logic
+    if (filenameInput) {
+        const autocompleteList = document.createElement('div');
+        autocompleteList.className = 'autocomplete-items';
+        autocompleteList.style.cssText = `
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--color-main-background);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 0 0 4px 4px;
+        `;
+        
+        // Wrap input in relative container if not already
+        if (filenameInput.parentNode.style.position !== 'relative') {
+             filenameInput.parentNode.style.position = 'relative';
+        }
+        filenameInput.parentNode.appendChild(autocompleteList);
+
+        filenameInput.addEventListener('input', function(e) {
+            const val = this.value;
+            closeAllLists();
+            if (!val) return false;
+
+            // Check if we are typing a tag (last word starts with #)
+            const cursorPosition = this.selectionStart;
+            const textBeforeCursor = val.substring(0, cursorPosition);
+            const lastHashIndex = textBeforeCursor.lastIndexOf('#');
+
+            if (lastHashIndex !== -1) {
+                // Check if there's a space after the hash before the cursor
+                // If so, we might be typing a new word, unless it's inside quotes (complex to detect perfectly without full parser, but simple heuristic works)
+                // For simple autocomplete: trigger if no space between # and cursor OR if we are inside a partial tag
+                
+                const query = textBeforeCursor.substring(lastHashIndex + 1);
+                
+                // If query contains a quote, we might be closing it or inside it. 
+                // Let's keep it simple: Autocomplete works for unquoted typing to help insert quotes.
+                if (query.includes('"')) return; 
+
+                const matches = availableTags.filter(tag => tag.toLowerCase().startsWith(query.toLowerCase()));
+
+                if (matches.length > 0) {
+                    autocompleteList.style.display = 'block';
+                    matches.forEach(tag => {
+                        const item = document.createElement('div');
+                        item.style.cssText = `
+                            padding: 10px;
+                            cursor: pointer;
+                            border-bottom: 1px solid #d4d4d4;
+                            background-color: var(--color-main-background);
+                            color: var(--color-main-text);
+                        `;
+                        item.innerHTML = "<strong>" + tag.substr(0, query.length) + "</strong>";
+                        item.innerHTML += tag.substr(query.length);
+                        item.innerHTML += "<input type='hidden' value='" + tag + "'>";
+                        
+                        item.addEventListener('click', function(e) {
+                            const selectedTag = this.getElementsByTagName("input")[0].value;
+                            let tagToInsert = selectedTag;
+                            
+                            // Add quotes if tag has spaces
+                            if (selectedTag.includes(' ')) {
+                                tagToInsert = `"${selectedTag}"`;
+                            }
+                            
+                            const textBeforeHash = textBeforeCursor.substring(0, lastHashIndex);
+                            const textAfterCursor = val.substring(cursorPosition);
+                            
+                            filenameInput.value = textBeforeHash + '#' + tagToInsert + ' ' + textAfterCursor;
+                            
+                            closeAllLists();
+                            filenameInput.focus();
+                        });
+                        
+                        // Hover effect
+                        item.addEventListener('mouseover', () => {
+                            item.style.backgroundColor = 'var(--color-background-dark)';
+                        });
+                        item.addEventListener('mouseout', () => {
+                            item.style.backgroundColor = 'var(--color-main-background)';
+                        });
+
+                        autocompleteList.appendChild(item);
+                    });
+                }
+            }
+        });
+
+        // Close list when clicking outside
+        document.addEventListener("click", function (e) {
+            if (e.target !== filenameInput) {
+                closeAllLists();
+            }
+        });
+
+        function closeAllLists() {
+            autocompleteList.innerHTML = '';
+            autocompleteList.style.display = 'none';
+        }
+    }
+
+    function fetchTags() {
+        fetch(OC.generateUrl('/apps/advancedsearch/api/tags'))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    availableTags = data.tags;
+                    console.log('Tags loaded for autocomplete:', availableTags.length);
+                }
+            })
+            .catch(err => console.error('Error fetching tags:', err));
+    }
+
     function performSearch(page = 1) {
         let filenameInput = document.getElementById('filename').value;
         const hiddenTagsInput = document.getElementById('tags').value;
         let tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
         const fileType = document.getElementById('file-type').value;
 
-        // Parse tags from filename input (e.g. "Name #tag1 #tag2")
+        // Parse tags from filename input (e.g. "Name #tag1 #tag2" or Name #"Tag With Space")
         let parsedTags = [];
         
-        // Regex to find #tags (supports alphanumeric, accents, hyphens)
-        const tagRegex = /#([\w\u00C0-\u00FF-]+)/g;
+        // Regex to find #tags
+        // Group 1: Quoted tag content (e.g. "Tag Name")
+        // Group 2: Simple tag content (e.g. TagName)
+        const tagRegex = /#"([^"]+)"|#([\w\u00C0-\u00FF-]+)/g;
         let match;
         
+        // We need to reconstruct the clean filename by removing matches
+        // Using replace with callback is safer to handle the exact matches found
+        let cleanFilename = filenameInput;
+
         while ((match = tagRegex.exec(filenameInput)) !== null) {
-            parsedTags.push(match[1]);
+            // match[1] is the quoted content, match[2] is the simple content
+            const tag = match[1] || match[2];
+            if (tag) {
+                parsedTags.push(tag);
+            }
         }
         
         // Remove tags from filename to get the clean search term
-        let cleanFilename = filenameInput.replace(tagRegex, '').trim();
+        cleanFilename = filenameInput.replace(tagRegex, '').trim();
         // Remove extra spaces left by removal
         cleanFilename = cleanFilename.replace(/\s+/g, ' ');
 
