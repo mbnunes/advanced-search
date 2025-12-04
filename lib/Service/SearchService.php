@@ -702,13 +702,28 @@ class SearchService
 
         // 1. Busca Universal por termo (filename/content/tags)
         if (!empty($term)) {
-            $mustClauses[] = [
-                'query_string' => [
-                    'query' => '*' . $term . '*',
-                    'fields' => ['title', 'content', 'tags'], // Adicionado 'tags' para busca universal
-                    'default_operator' => 'AND'
-                ]
-            ];
+            // Tokenizar o termo para permitir "GINASTICA FLAVIA" (GINASTICA no nome, FLAVIA na tag)
+            $tokens = preg_split('/\s+/', trim($term), -1, PREG_SPLIT_NO_EMPTY);
+            
+            foreach ($tokens as $token) {
+                // Para cada token, ele deve existir em ALGUM dos campos (Title OU Content OU Tags)
+                // Usamos wildcard *token* para match parcial
+                $shouldClauses = [];
+                
+                $wildcard = '*' . $token . '*';
+                
+                $shouldClauses[] = ['wildcard' => ['title' => ['value' => $wildcard, 'case_insensitive' => true]]];
+                $shouldClauses[] = ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]];
+                $shouldClauses[] = ['wildcard' => ['tags' => ['value' => $wildcard, 'case_insensitive' => true]]];
+                
+                // Adicionar o grupo OR (should) ao grupo AND principal (must)
+                $mustClauses[] = [
+                    'bool' => [
+                        'should' => $shouldClauses,
+                        'minimum_should_match' => 1
+                    ]
+                ];
+            }
         }
 
         // 2. Busca por tags EXPLÍCITAS (filtro #)
