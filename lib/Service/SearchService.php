@@ -52,7 +52,7 @@ class SearchService
         return true;
     }
 
-    // MANTER SUA FUNÇÃO ORIGINAL searchFiles EXATAMENTE COMO ESTAVA
+    // MANTER SUA FUNÇÃO ORIGINAL searchFiles COM LÓGICA UNIVERSAL
     public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0)
     {
         $user = $this->userSession->getUser();
@@ -63,86 +63,147 @@ class SearchService
         $userFolder = $this->rootFolder->getUserFolder($user->getUID());
         $results = [];
 
-        // Buscar arquivos
+        // Lógica Universal: Se temos um termo de busca ($filename), ele deve buscar em Nome OU Tags
+        // Se também temos $tags explícitas (vindas do filtro #), elas continuam sendo obrigatórias (AND)
+        
+        $universalFileIds = null;
+
         if (!empty($filename)) {
-            // Certificar que o filename não está vazio antes de chamar search()
             $searchTerm = trim($filename);
             if (strlen($searchTerm) > 0) {
-                error_log('[AdvancedSearch] Executing traditional search for: ' . $searchTerm);
-                $searchResults = $userFolder->search($searchTerm);
-            } else {
-                $searchResults = [];
+                // Tokenizar a busca (separar por espaços)
+                // Ex: "GINASTICA FLAVIA" -> ["GINASTICA", "FLAVIA"]
+                // O arquivo deve dar match em TODOS os tokens (em nome OU tag)
+                $tokens = preg_split('/\s+/', $searchTerm, -1, PREG_SPLIT_NO_EMPTY);
+                
+                foreach ($tokens as $token) {
+                    // 1. Buscar arquivos com esse token no nome
+                    $nameMatches = $userFolder->search($token);
+                    $nameFileIds = [];
+                    foreach ($nameMatches as $node) {
+                        if ($node->getType() === FileInfo::TYPE_FILE) {
+                            $nameFileIds[] = $node->getId();
+                        }
+                    }
+
+                    // 2. Buscar arquivos com tags que contenham esse token
+                    $tagFileIds = $this->getFileIdsByTagToken($token);
+
+                    // União dos dois conjuntos (Nome U Tag) para este token
+                    $tokenFileIds = array_unique(array_merge($nameFileIds, $tagFileIds));
+
+                    // Interseção com os resultados anteriores (AND entre tokens)
+                    if ($universalFileIds === null) {
+                        $universalFileIds = $tokenFileIds;
+                    } else {
+                        $universalFileIds = array_intersect($universalFileIds, $tokenFileIds);
+                    }
+
+                    // Se em algum momento a interseção for vazia, não há resultados
+                    if (empty($universalFileIds)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Se não houve busca por nome (universal), $universalFileIds é null.
+        // Se houve e não achou nada, é [].
+
+        // Otimização 1: Filtrar IDs por tags EXPLÍCITAS (#) se houver
+        $explicitTagFileIds = null;
+        if (!empty($tags)) {
+            $explicitTagFileIds = $this->getFileIdsByTags($tags, $tagOperator);
+            if (empty($explicitTagFileIds)) {
+                return []; // Tags explícitas não encontraram nada
+            }
+        }
+
+        // Combinar Universal Search com Tags Explícitas
+        $finalAllowedIds = null;
+
+        if ($universalFileIds !== null && $explicitTagFileIds !== null) {
+            // Tem que satisfazer ambos
+            $finalAllowedIds = array_intersect($universalFileIds, $explicitTagFileIds);
+        } elseif ($universalFileIds !== null) {
+            $finalAllowedIds = $universalFileIds;
+        } elseif ($explicitTagFileIds !== null) {
+            $finalAllowedIds = $explicitTagFileIds;
+        }
+
+        // Se $finalAllowedIds for vazio array (e não null), retorna vazio
+        if ($finalAllowedIds !== null && empty($finalAllowedIds)) {
+            return [];
+        }
+
+        // Se $finalAllowedIds for null, significa que não tem filtro de nome nem de tag.
+        // Nesse caso, se tiver fileType, buscamos por tipo. Se não, retornamos recentes ou nada.
+        
+        $candidates = [];
+
+        if ($finalAllowedIds !== null) {
+            // Buscar os objetos Node para os IDs encontrados
+            // Converter para chaves para busca rápida
+            $finalAllowedIdsFlip = array_flip($finalAllowedIds);
+            
+            // Precisamos carregar os arquivos. 
+            // Se forem muitos, isso pode ser pesado. Mas search() do userFolder também carrega.
+            // Vamos iterar os IDs e carregar.
+            
+            foreach ($finalAllowedIds as $fileId) {
+                try {
+                    $nodes = $userFolder->getById($fileId);
+                    if (!empty($nodes)) {
+                        $candidates[] = $nodes[0];
+                    }
+                } catch (\Exception $e) { continue; }
             }
         } else {
-            // Se não tem nome, buscar por outros critérios
-            $searchResults = $this->searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator);
-        }
-
-        // Otimização 1: Filtrar IDs por tags antecipadamente se houver tags
-        $allowedFileIds = null;
-        if (!empty($tags)) {
-            $allowedFileIds = $this->getFileIdsByTags($tags, $tagOperator);
-            // Se buscou por tags e não achou nada, já retorna vazio
-            if (empty($allowedFileIds)) {
-                return [];
+            // Sem filtros de nome/tag. Verificar FileType.
+            if (!empty($fileType)) {
+                $candidates = $this->searchByFileTypeOnly($userFolder, $fileType);
+            } else {
+                // Sem nenhum filtro: retornar recentes
+                try {
+                    $candidates = $userFolder->getRecent(1000);
+                } catch (\Exception $e) { $candidates = []; }
             }
-            // Converter para chaves para busca rápida O(1)
-            $allowedFileIds = array_flip($allowedFileIds);
         }
 
-        // Filtrar e processar resultados
+        // Filtrar e processar resultados (Paginação, FileType, Ocultos)
         $filteredResults = [];
         $count = 0;
         $skipped = 0;
 
-        foreach ($searchResults as $file) {
-            // Verificar se é arquivo (não pasta)
-            if ($file->getType() !== FileInfo::TYPE_FILE) {
-                continue;
-            }
+        foreach ($candidates as $file) {
+            // Verificar se é arquivo
+            if ($file->getType() !== FileInfo::TYPE_FILE) continue;
 
-            // Ignorar arquivos ocultos (começando com .)
-            if (strpos($file->getName(), '.') === 0) {
-                continue;
-            }
+            // Ignorar ocultos
+            if (strpos($file->getName(), '.') === 0) continue;
 
-            // Filtrar por tipo de arquivo
-            if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
-                continue;
-            }
+            // Filtrar por tipo (se já não foi feito)
+            if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
 
-            // Filtrar por tags (usando o array pré-calculado)
-            if ($allowedFileIds !== null && !isset($allowedFileIds[$file->getId()])) {
-                continue;
-            }
-
-            // Otimização 2: Paginação manual com Early Exit
-            // Se ainda não chegamos no offset, pular
+            // Paginação
             if ($skipped < $offset) {
                 $skipped++;
                 continue;
             }
 
-            // Adicionar aos resultados
             $filteredResults[] = $file;
             $count++;
 
-            // Se já pegamos o limite, parar
-            if ($count >= $limit) {
-                break;
-            }
+            if ($count >= $limit) break;
         }
 
-        // Otimização 3: Buscar tags em lote para os arquivos da página atual
-        // SE o limite for muito alto (ex: > 200), provavelmente é uma contagem ou exportação
-        // Nesses casos, pular o carregamento de tags para performance
+        // Carregar tags em lote
         $tagsByFileId = [];
         if ($limit <= 200) {
             $fileIds = array_map(function($f) { return $f->getId(); }, $filteredResults);
             $tagsByFileId = $this->getTagsForFiles($fileIds);
         }
 
-        // Formatar resultados
         foreach ($filteredResults as $file) {
             $fileTags = isset($tagsByFileId[$file->getId()]) ? $tagsByFileId[$file->getId()] : [];
             $results[] = $this->formatFileResult($file, $fileTags);
@@ -151,13 +212,51 @@ class SearchService
         return $results;
     }
 
+    // Helper para buscar IDs de arquivos que tenham tags contendo um token
+    private function getFileIdsByTagToken($token) {
+        try {
+            $allTags = $this->systemTagManager->getAllTags();
+            $matchingTagIds = [];
+            
+            // Busca case-insensitive parcial nas tags
+            foreach ($allTags as $tag) {
+                if (stripos($tag->getName(), $token) !== false) {
+                    $matchingTagIds[] = $tag->getId();
+                }
+            }
+
+            if (empty($matchingTagIds)) {
+                return [];
+            }
+
+            // Buscar objetos com essas tags (OR - qualquer uma das tags que deu match)
+            // getObjectIdsForTags com array de tags retorna objetos que tem TODAS as tags?
+            // Não, a documentação/implementação padrão do Nextcloud para getObjectIdsForTags
+            // geralmente faz um AND se passarmos várias tags.
+            // Para fazer OR (qualquer tag que contenha o token), precisamos iterar ou usar lógica específica.
+            
+            // Vamos assumir que precisamos fazer OR aqui: se a tag é "FLAVIA" ou "FLAVIA ANDRADE", ambas servem para o token "FLAVIA".
+            
+            $fileIds = [];
+            // Fazer em lotes ou um por um? O mapper pode não suportar OR nativo facilmente.
+            // Vamos buscar um por um e unir, é mais seguro.
+            foreach ($matchingTagIds as $tagId) {
+                $ids = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
+                foreach ($ids as $id) {
+                    $fileIds[$id] = $id; // Usar chave para evitar duplicatas
+                }
+            }
+            
+            return array_values($fileIds);
+
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
     public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
         $this->log("searchFilesWithFullText START. Filename: '$filename'");
         
-        // Se full text search não estiver disponível, usar método tradicional
-        // AGORA: Tentar conexão direta mesmo sem manager
-        // if (!$this->fullTextSearchManager) { ... }
-
         try {
             $this->log("Preparing Direct SearchRequest...");
             $user = $this->userSession->getUser();
@@ -176,7 +275,6 @@ class SearchService
             
             foreach ($documents as $hit) {
                 try {
-                    // O ID vem como "files:12345", precisamos extrair o número
                     $elasticId = $hit['_id'];
                     $fileId = 0;
                     
@@ -193,33 +291,25 @@ class SearchService
                     if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
                         $fileInfo = $nodes[0];
                         
-                        // Ignorar arquivos ocultos (começando com .)
-                        if (strpos($fileInfo->getName(), '.') === 0) {
-                            continue;
-                        }
+                        if (strpos($fileInfo->getName(), '.') === 0) continue;
 
                         $candidates[] = [
                             'file' => $fileInfo,
                             'score' => $hit['_score'],
-                            'excerpt' => '' // Excerpt não vem fácil no direct hit sem highlight
+                            'excerpt' => '' 
                         ];
                         $fileIds[] = $fileId;
                     }
                 } catch (\Exception $e) {
-                    $this->log("Error processing hit: " . $e->getMessage());
                     continue;
                 }
             }
             
-            $this->log("Candidates found: " . count($candidates));
-
             $tagsByFileId = [];
             if ($limit <= 200) {
-                $this->log("Fetching tags for " . count($fileIds) . " files...");
                 $tagsByFileId = $this->getTagsForFiles($fileIds);
             }
             
-            $this->log("Formatting results...");
             foreach ($candidates as $candidate) {
                 $fileInfo = $candidate['file'];
                 $fileId = $fileInfo->getId();
@@ -229,6 +319,7 @@ class SearchService
                     continue;
                 }
                 
+                // Verificação de tags explícitas (pós-filtro para garantir)
                 if (!empty($tags) && !$this->tagsMatch($fileTags, $tags, $tagOperator)) {
                     continue;
                 }
@@ -240,11 +331,10 @@ class SearchService
                 $results[] = $result;
             }
             
-            $this->log("Returning " . count($results) . " results. END.");
             return $results;
             
         } catch (\Exception $e) {
-            $this->lastError = "EXCEPTION in searchFilesWithFullText: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString();
+            $this->lastError = "EXCEPTION in searchFilesWithFullText: " . $e->getMessage();
             $this->log($this->lastError);
             return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
         }
@@ -610,22 +700,20 @@ class SearchService
         // Construir a query usando bool query para suportar filename AND tags
         $mustClauses = [];
 
-        // 1. Busca por termo (filename/content)
+        // 1. Busca Universal por termo (filename/content/tags)
         if (!empty($term)) {
             $mustClauses[] = [
                 'query_string' => [
                     'query' => '*' . $term . '*',
-                    'fields' => ['title', 'content'],
+                    'fields' => ['title', 'content', 'tags'], // Adicionado 'tags' para busca universal
                     'default_operator' => 'AND'
                 ]
             ];
         }
 
-        // 2. Busca por tags
+        // 2. Busca por tags EXPLÍCITAS (filtro #)
         if (!empty($tags)) {
             foreach ($tags as $tag) {
-                // Usar match phrase para garantir que a tag seja encontrada
-                // Poderíamos usar 'term' em 'tags.keyword' para exatidão, mas 'match' é mais flexível
                 $mustClauses[] = [
                     'match' => [
                         'tags' => [
