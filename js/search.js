@@ -1072,7 +1072,42 @@ document.addEventListener('DOMContentLoaded', function () {
             // Para outros arquivos, abrir na visualização de arquivos
             window.location.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
         }
-    }    function formatFileSize(bytes) {
+    }
+
+    function showLoading() {
+        if (loading) loading.classList.remove('hidden');
+        if (fileList) fileList.classList.add('hidden');
+        if (emptyContent) emptyContent.classList.add('hidden');
+        if (pagination) pagination.classList.add('hidden');
+    }
+
+    function hideLoading() {
+        if (loading) loading.classList.add('hidden');
+        if (fileList) fileList.classList.remove('hidden');
+    }
+
+    function showEmptyContent() {
+        if (emptyContent) emptyContent.classList.remove('hidden');
+        if (fileList) fileList.innerHTML = '';
+        if (pagination) pagination.classList.add('hidden');
+    }
+
+    function hideEmptyContent() {
+        if (emptyContent) emptyContent.classList.add('hidden');
+    }
+
+    function showError(message) {
+        if (resultCount) {
+            resultCount.innerHTML = `<span style="color: var(--color-error);">${message}</span>`;
+        }
+        showEmptyContent();
+        const emptyTitle = document.querySelector('#emptycontent h2');
+        const emptyText = document.querySelector('#emptycontent p');
+        if (emptyTitle) emptyTitle.textContent = 'Erro';
+        if (emptyText) emptyText.textContent = message;
+    }
+
+    function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
