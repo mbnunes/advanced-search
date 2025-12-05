@@ -668,57 +668,13 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         for (const file of files) {
+            // Lógica de exibição: Imagens = Thumbnail; Vídeo/Áudio = Ícone de Play
             const isImage = file.mimetype?.startsWith('image/');
             const isVideo = file.mimetype?.startsWith('video/');
-            const hasThumbnail = isImage || isVideo;
-
-            const fileCard = document.createElement('div');
-            fileCard.className = 'file-card';
-            fileCard.style.cssText = `
-                background: var(--color-background-hover);
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                transition: transform 0.2s, box-shadow 0.2s;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                position: relative;
-            `;
-
-            // Indicador de relevância
-            if (file.searchType === 'fulltext' && file.score) {
-                const scoreIndicator = document.createElement('div');
-                scoreIndicator.className = 'score-indicator';
-                scoreIndicator.innerHTML = '⭐';
-                scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
-                scoreIndicator.style.cssText = `
-                    position: absolute;
-                    top: 8px;
-                    right: 8px;
-                    background: rgba(0,0,0,0.7);
-                    color: var(--color-text-light);
-                    padding: 4px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    z-index: 1;
-                `;
-                fileCard.appendChild(scoreIndicator);
-            }
-
-            fileCard.addEventListener('mouseover', () => {
-                fileCard.style.transform = 'translateY(-2px)';
-                fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-            });
-
-            fileCard.addEventListener('mouseout', () => {
-                fileCard.style.transform = 'translateY(0)';
-                fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-            });
-
-            fileCard.fileData = file; // Anexar dados do arquivo
-            fileCard.addEventListener('click', handleFileClick);
+            const isAudio = file.mimetype?.startsWith('audio/') || file.name.toLowerCase().endsWith('.cfa');
+            
+            // Apenas imagens tentam carregar thumbnail
+            const hasThumbnail = isImage;
 
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
@@ -753,6 +709,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
 
                 thumbnailArea.appendChild(img);
+            } else if (isVideo || isAudio) {
+                // Ícone de PLAY para vídeo e áudio
+                const playIcon = document.createElement('div');
+                // Usando um caractere unicode de Play ou ícone do sistema se disponível
+                // Vamos usar um estilo visual de botão de play
+                playIcon.innerHTML = '▶'; 
+                playIcon.style.cssText = `
+                    font-size: 48px;
+                    color: var(--color-text-maxcontrast);
+                    background: rgba(0,0,0,0.3);
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding-left: 8px; /* Ajuste visual para centralizar o triângulo */
+                    border: 2px solid var(--color-text-maxcontrast);
+                `;
+                thumbnailArea.appendChild(playIcon);
             } else {
                 const fileIcon = document.createElement('div');
                 fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
