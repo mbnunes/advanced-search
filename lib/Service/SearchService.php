@@ -277,6 +277,11 @@ class SearchService
             if (!empty($filename)) {
                 $tokens = preg_split('/\s+/', trim($filename), -1, PREG_SPLIT_NO_EMPTY);
                 
+                if ($tokens === false) {
+                    $this->log("Error: preg_split failed for filename: $filename");
+                    $tokens = [];
+                }
+
                 foreach ($tokens as $token) {
                     // a. ES (Title/Content)
                     $esIds = $this->getIdsFromElasticsearch($token);
@@ -388,10 +393,16 @@ class SearchService
             
             return $results;
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->lastError = "EXCEPTION in searchFilesWithFullText: " . $e->getMessage();
             $this->log($this->lastError);
-            return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            // Fallback seguro
+            try {
+                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            } catch (\Throwable $e2) {
+                $this->log("Fallback failed: " . $e2->getMessage());
+                return [];
+            }
         }
     }
 
