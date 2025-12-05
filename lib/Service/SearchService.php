@@ -39,7 +39,12 @@ class SearchService
     }
 
     private function log($message) {
-        error_log("[AdvancedSearch] Service: $message");
+        try {
+            \OC::$server->getLogger()->error("[AdvancedSearch] $message", ['app' => 'advanced_search']);
+        } catch (\Throwable $e) {
+            // Fallback
+            error_log("[AdvancedSearch] $message");
+        }
     }
 
     private function checkFulltextSearchAvailable()
@@ -661,6 +666,7 @@ class SearchService
             return $result;
 
         } catch (\Throwable $e) {
+            error_log("[AdvancedSearch] Error in getTagsForFiles: " . $e->getMessage());
             return [];
         }
     }
