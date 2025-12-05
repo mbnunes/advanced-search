@@ -676,6 +676,54 @@ document.addEventListener('DOMContentLoaded', function () {
             // Apenas imagens tentam carregar thumbnail
             const hasThumbnail = isImage;
 
+            const fileCard = document.createElement('div');
+            fileCard.className = 'file-card';
+            fileCard.style.cssText = `
+                background: var(--color-background-hover);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                transition: transform 0.2s, box-shadow 0.2s;
+                cursor: pointer;
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                position: relative;
+            `;
+
+            // Indicador de relevância
+            if (file.searchType === 'fulltext' && file.score) {
+                const scoreIndicator = document.createElement('div');
+                scoreIndicator.className = 'score-indicator';
+                scoreIndicator.innerHTML = '⭐';
+                scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
+                scoreIndicator.style.cssText = `
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: rgba(0,0,0,0.7);
+                    color: var(--color-text-light);
+                    padding: 4px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1;
+                `;
+                fileCard.appendChild(scoreIndicator);
+            }
+
+            fileCard.addEventListener('mouseover', () => {
+                fileCard.style.transform = 'translateY(-2px)';
+                fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            });
+
+            fileCard.addEventListener('mouseout', () => {
+                fileCard.style.transform = 'translateY(0)';
+                fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            });
+
+            fileCard.fileData = file; // Anexar dados do arquivo
+            fileCard.addEventListener('click', handleFileClick);
+
             const thumbnailArea = document.createElement('div');
             thumbnailArea.className = 'thumbnail-area';
             thumbnailArea.style.cssText = `
