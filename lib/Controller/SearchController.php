@@ -40,7 +40,7 @@ class SearchController extends Controller
             $tags = isset($params['tags']) && is_array($params['tags']) ? $params['tags'] : [];
             $tagOperator = isset($params['tagOperator']) ? $params['tagOperator'] : 'AND';
             $fileType = isset($params['fileType']) ? $params['fileType'] : '';
-            $limit = isset($params['limit']) ? max(1, min(500, (int)$params['limit'])) : 100;
+            $limit = isset($params['limit']) ? max(1, min(10000, (int)$params['limit'])) : 100;
             $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
             $useFullTextSearch = isset($params['useFullTextSearch']) ? (bool)$params['useFullTextSearch'] : true; // MUDANÇA: Padrão true
 
@@ -67,8 +67,8 @@ class SearchController extends Controller
             $searchMethod = 'fulltext_forced';
 
             // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
-            if (!empty($results) && isset($results[0]['searchType']) && $results[0]['searchType'] === 'fulltext') {
-                $actualSearchType = 'fulltext';
+            if (!empty($results) && isset($results[0]['searchType']) && ($results[0]['searchType'] === 'fulltext' || $results[0]['searchType'] === 'hybrid')) {
+                $actualSearchType = $results[0]['searchType'];
             } else {
                 $actualSearchType = 'traditional_fallback';
             }

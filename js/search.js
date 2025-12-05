@@ -733,9 +733,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (hasThumbnail) {
                 const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
-                thumbnailArea.style.backgroundImage = `url('${thumbnailUrl}')`;
-                thumbnailArea.style.backgroundSize = 'cover';
-                thumbnailArea.style.backgroundPosition = 'center';
+                
+                const img = document.createElement('img');
+                img.src = thumbnailUrl;
+                img.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                `;
+                
+                // Error handling: fallback to icon
+                img.onerror = function() {
+                    console.warn('Falha ao carregar miniatura para:', file.name);
+                    this.style.display = 'none';
+                    const fileIcon = document.createElement('div');
+                    fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                    fileIcon.style.fontSize = '48px';
+                    thumbnailArea.appendChild(fileIcon);
+                };
+
+                thumbnailArea.appendChild(img);
             } else {
                 const fileIcon = document.createElement('div');
                 fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
