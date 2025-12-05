@@ -668,219 +668,227 @@ document.addEventListener('DOMContentLoaded', function () {
         `;
 
         for (const file of files) {
-            // Lógica de exibição: Imagens = Thumbnail; Vídeo/Áudio = Ícone de Play
-            const isImage = file.mimetype?.startsWith('image/');
-            const isVideo = file.mimetype?.startsWith('video/');
-            const isAudio = file.mimetype?.startsWith('audio/') || file.name.toLowerCase().endsWith('.cfa');
-            
-            // Imagens e Vídeos tentam carregar thumbnail
-            const hasThumbnail = isImage || isVideo;
+            try {
+                if (!file || !file.name) {
+                    console.warn('Arquivo inválido encontrado:', file);
+                    continue;
+                }
 
-            const fileCard = document.createElement('div');
-            fileCard.className = 'file-card';
-            fileCard.style.cssText = `
-                background: var(--color-background-hover);
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                transition: transform 0.2s, box-shadow 0.2s;
-                cursor: pointer;
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                position: relative;
-            `;
-
-            // Indicador de relevância
-            if (file.searchType === 'fulltext' && file.score) {
-                const scoreIndicator = document.createElement('div');
-                scoreIndicator.className = 'score-indicator';
-                scoreIndicator.innerHTML = '⭐';
-                scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
-                scoreIndicator.style.cssText = `
-                    position: absolute;
-                    top: 8px;
-                    right: 8px;
-                    background: rgba(0,0,0,0.7);
-                    color: var(--color-text-light);
-                    padding: 4px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    z-index: 1;
-                `;
-                fileCard.appendChild(scoreIndicator);
-            }
-
-            fileCard.addEventListener('mouseover', () => {
-                fileCard.style.transform = 'translateY(-2px)';
-                fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-            });
-
-            fileCard.addEventListener('mouseout', () => {
-                fileCard.style.transform = 'translateY(0)';
-                fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-            });
-
-            fileCard.fileData = file; // Anexar dados do arquivo
-            fileCard.addEventListener('click', handleFileClick);
-
-            const thumbnailArea = document.createElement('div');
-            thumbnailArea.className = 'thumbnail-area';
-            thumbnailArea.style.cssText = `
-                height: 150px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: var(--color-background-dark);
-                position: relative;
-                overflow: hidden;
-            `;
-
-            if (hasThumbnail) {
-                const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
+                // Lógica de exibição: Imagens = Thumbnail; Vídeo/Áudio = Ícone de Play
+                const isImage = file.mimetype?.startsWith('image/');
+                const isVideo = file.mimetype?.startsWith('video/');
+                const isAudio = file.mimetype?.startsWith('audio/') || file.name.toLowerCase().endsWith('.cfa');
                 
-                const img = document.createElement('img');
-                img.src = thumbnailUrl;
-                img.style.cssText = `
-                    width: 100%;
+                // Imagens e Vídeos tentam carregar thumbnail
+                const hasThumbnail = isImage || isVideo;
+
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                fileCard.style.cssText = `
+                    background: var(--color-background-hover);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    transition: transform 0.2s, box-shadow 0.2s;
+                    cursor: pointer;
+                    display: flex;
+                    flex-direction: column;
                     height: 100%;
-                    object-fit: cover;
-                    position: absolute;
-                    top: 0;
-                    left: 0;
+                    position: relative;
                 `;
-                
-                // Error handling: fallback to icon
-                img.onerror = function() {
-                    console.warn('Falha ao carregar miniatura para:', file.name);
-                    this.style.display = 'none';
-                    
-                    // Se for imagem e falhar, mostra ícone. Se for vídeo e falhar, o ícone de play (adicionado abaixo) já serve, mas precisamos de um fundo ou ícone de arquivo atrás.
-                    if (isImage) {
-                        const fileIcon = document.createElement('div');
-                        fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
-                        fileIcon.style.fontSize = '48px';
-                        // Limpar conteúdo anterior (img oculta) para centralizar ícone
-                        thumbnailArea.innerHTML = ''; 
-                        thumbnailArea.appendChild(fileIcon);
-                    }
-                    // Se for vídeo, o ícone de play será adicionado depois, então não precisamos fazer nada aqui além de ocultar a imagem
-                };
 
-                thumbnailArea.appendChild(img);
-            }
+                // Indicador de relevância
+                if (file.searchType === 'fulltext' && file.score) {
+                    const scoreIndicator = document.createElement('div');
+                    scoreIndicator.className = 'score-indicator';
+                    scoreIndicator.innerHTML = '⭐';
+                    scoreIndicator.title = `Relevância: ${file.score.toFixed(2)}`;
+                    scoreIndicator.style.cssText = `
+                        position: absolute;
+                        top: 8px;
+                        right: 8px;
+                        background: rgba(0,0,0,0.7);
+                        color: var(--color-text-light);
+                        padding: 4px;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        z-index: 1;
+                    `;
+                    fileCard.appendChild(scoreIndicator);
+                }
 
-            if (isVideo || isAudio) {
-                // Ícone de PLAY para vídeo e áudio (Overlay)
-                const playIcon = document.createElement('div');
-                playIcon.innerHTML = '▶'; 
-                playIcon.style.cssText = `
-                    font-size: 48px;
-                    color: var(--color-text-maxcontrast);
-                    background: rgba(0,0,0,0.5);
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 50%;
+                fileCard.addEventListener('mouseover', () => {
+                    fileCard.style.transform = 'translateY(-2px)';
+                    fileCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                });
+
+                fileCard.addEventListener('mouseout', () => {
+                    fileCard.style.transform = 'translateY(0)';
+                    fileCard.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                });
+
+                fileCard.fileData = file; // Anexar dados do arquivo
+                fileCard.addEventListener('click', handleFileClick);
+
+                const thumbnailArea = document.createElement('div');
+                thumbnailArea.className = 'thumbnail-area';
+                thumbnailArea.style.cssText = `
+                    height: 150px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding-left: 6px;
-                    border: 2px solid var(--color-text-maxcontrast);
-                    z-index: 2; /* Ficar acima da imagem */
-                    position: relative; /* Para centralizar no flex container */
-                `;
-                thumbnailArea.appendChild(playIcon);
-            } 
-            
-            if (!hasThumbnail && !isVideo && !isAudio) {
-                const fileIcon = document.createElement('div');
-                fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
-                fileIcon.style.fontSize = '48px';
-                thumbnailArea.appendChild(fileIcon);
-            }
-
-            const infoArea = document.createElement('div');
-            infoArea.className = 'info-area';
-            infoArea.style.cssText = `
-                padding: 12px;
-                flex-grow: 1;
-                display: flex;
-                flex-direction: column;
-            `;
-
-            const fileName = document.createElement('div');
-            fileName.className = 'file-name';
-            fileName.textContent = file.name;
-            fileName.style.cssText = `
-                font-weight: bold;
-                margin-bottom: 8px;
-                word-break: break-word;
-                white-space: normal;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            `;
-
-            const fileDate = document.createElement('div');
-            fileDate.className = 'file-date';
-            fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
-            fileDate.style.cssText = `
-            font-size: 12px;
-            color: var(--color-text-lighter);
-            margin-bottom: 8px;
-        `;
-
-            const fileTags = document.createElement('div');
-            fileTags.className = 'file-tags';
-            fileTags.style.cssText = `
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: auto;
-        `;
-
-            if (file.tags && file.tags.length > 0) {
-                file.tags.forEach(tag => {
-                    const tagLink = document.createElement('a');
-                    tagLink.href = OC.generateUrl('/apps/files/tags/' + tag.id + '?dir=/' + tag.id);
-                    tagLink.style.textDecoration = 'none';
-                    tagLink.target = '_blank';
-                    tagLink.addEventListener('click', (event) => event.stopPropagation());
-
-                    const tagElement = document.createElement('span');
-                    tagElement.className = 'tag';
-                    tagElement.textContent = tag.name;
-                    tagElement.style.cssText = `
-                    background: green;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-size: 11px;
-                    margin-right: 4px;
+                    background: var(--color-background-dark);
+                    position: relative;
+                    overflow: hidden;
                 `;
 
-                    tagLink.appendChild(tagElement);
-                    fileTags.appendChild(tagLink);
-                });
-            } else {
-                const noTags = document.createElement('span');
-                noTags.textContent = 'Nenhuma tag';
-                noTags.style.cssText = `
-                font-size: 11px;
+                if (hasThumbnail) {
+                    const thumbnailUrl = OC.generateUrl('/core/preview?fileId=' + file.id + '&x=250&y=250&a=true');
+                    
+                    const img = document.createElement('img');
+                    img.src = thumbnailUrl;
+                    img.style.cssText = `
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                    `;
+                    
+                    // Error handling: fallback to icon
+                    img.onerror = function() {
+                        // console.warn('Falha ao carregar miniatura para:', file.name); // Silenciar aviso comum
+                        this.style.display = 'none';
+                        
+                        // Se for imagem e falhar, mostra ícone. Se for vídeo e falhar, o ícone de play (adicionado abaixo) já serve, mas precisamos de um fundo ou ícone de arquivo atrás.
+                        if (isImage) {
+                            const fileIcon = document.createElement('div');
+                            fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                            fileIcon.style.fontSize = '48px';
+                            // Limpar conteúdo anterior (img oculta) para centralizar ícone
+                            thumbnailArea.innerHTML = ''; 
+                            thumbnailArea.appendChild(fileIcon);
+                        }
+                    };
+
+                    thumbnailArea.appendChild(img);
+                }
+
+                if (isVideo || isAudio) {
+                    // Ícone de PLAY para vídeo e áudio (Overlay)
+                    const playIcon = document.createElement('div');
+                    playIcon.innerHTML = '▶'; 
+                    playIcon.style.cssText = `
+                        font-size: 48px;
+                        color: var(--color-text-maxcontrast);
+                        background: rgba(0,0,0,0.5);
+                        width: 64px;
+                        height: 64px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding-left: 6px;
+                        border: 2px solid var(--color-text-maxcontrast);
+                        z-index: 2; /* Ficar acima da imagem */
+                        position: relative; /* Para centralizar no flex container */
+                    `;
+                    thumbnailArea.appendChild(playIcon);
+                } 
+                
+                if (!hasThumbnail && !isVideo && !isAudio) {
+                    const fileIcon = document.createElement('div');
+                    fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                    fileIcon.style.fontSize = '48px';
+                    thumbnailArea.appendChild(fileIcon);
+                }
+
+                const infoArea = document.createElement('div');
+                infoArea.className = 'info-area';
+                infoArea.style.cssText = `
+                    padding: 12px;
+                    flex-grow: 1;
+                    display: flex;
+                    flex-direction: column;
+                `;
+
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                fileName.style.cssText = `
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                    word-break: break-word;
+                    white-space: normal;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                `;
+
+                const fileDate = document.createElement('div');
+                fileDate.className = 'file-date';
+                fileDate.textContent = new Date(file.mtime * 1000).toLocaleDateString();
+                fileDate.style.cssText = `
+                font-size: 12px;
                 color: var(--color-text-lighter);
+                margin-bottom: 8px;
             `;
-                fileTags.appendChild(noTags);
+
+                const fileTags = document.createElement('div');
+                fileTags.className = 'file-tags';
+                fileTags.style.cssText = `
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: auto;
+            `;
+
+                if (file.tags && file.tags.length > 0) {
+                    file.tags.forEach(tag => {
+                        const tagLink = document.createElement('a');
+                        tagLink.href = OC.generateUrl('/apps/files/tags/' + tag.id + '?dir=/' + tag.id);
+                        tagLink.style.textDecoration = 'none';
+                        tagLink.target = '_blank';
+                        tagLink.addEventListener('click', (event) => event.stopPropagation());
+
+                        const tagElement = document.createElement('span');
+                        tagElement.className = 'tag';
+                        tagElement.textContent = tag.name;
+                        tagElement.style.cssText = `
+                        background: green;
+                        color: white;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        margin-right: 4px;
+                    `;
+
+                        tagLink.appendChild(tagElement);
+                        fileTags.appendChild(tagLink);
+                    });
+                } else {
+                    const noTags = document.createElement('span');
+                    noTags.textContent = 'Nenhuma tag';
+                    noTags.style.cssText = `
+                    font-size: 11px;
+                    color: var(--color-text-lighter);
+                `;
+                    fileTags.appendChild(noTags);
+                }
+
+                infoArea.appendChild(fileName);
+                infoArea.appendChild(fileDate);
+                infoArea.appendChild(fileTags);
+
+                fileCard.appendChild(thumbnailArea);
+                fileCard.appendChild(infoArea);
+
+                gridContainer.appendChild(fileCard);
+            } catch (err) {
+                console.error('Erro ao renderizar arquivo:', file, err);
             }
-
-            infoArea.appendChild(fileName);
-            infoArea.appendChild(fileDate);
-            infoArea.appendChild(fileTags);
-
-            fileCard.appendChild(thumbnailArea);
-            fileCard.appendChild(infoArea);
-
-            gridContainer.appendChild(fileCard);
         }
 
         fileList.innerHTML = '';
