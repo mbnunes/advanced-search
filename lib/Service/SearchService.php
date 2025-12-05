@@ -39,9 +39,7 @@ class SearchService
     }
 
     private function log($message) {
-        $logFile = '/tmp/search_debug.log';
-        $timestamp = date('Y-m-d H:i:s');
-        file_put_contents($logFile, "[$timestamp] Service: $message\n", FILE_APPEND);
+        error_log("[AdvancedSearch] Service: $message");
     }
 
     private function checkFulltextSearchAvailable()
