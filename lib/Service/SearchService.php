@@ -360,6 +360,11 @@ class SearchService
                         
                         if ($file->getType() !== FileInfo::TYPE_FILE) continue;
                         if (strpos($file->getName(), '.') === 0) continue;
+                        
+                        // Excluir arquivos de sistema (.pek, .cfa)
+                        $ext = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
+                        if (in_array($ext, ['pek', 'cfa'])) continue;
+
                         if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
                         
                         if ($skipped < $offset) {
