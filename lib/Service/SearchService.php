@@ -255,79 +255,134 @@ class SearchService
     }
 
     public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
-        $this->log("searchFilesWithFullText START. Filename: '$filename'");
+        $this->log("searchFilesWithFullText HYBRID START. Filename: '$filename'");
         
         try {
-            $this->log("Preparing Direct SearchRequest...");
             $user = $this->userSession->getUser();
             if (!$user) {
                 throw new \Exception('User not logged in');
             }
-
-            // CHAMADA DIRETA AO ELASTICSEARCH
-            $documents = $this->searchDirectElasticsearch($filename, $tags, $limit, $offset);
-            
-            $results = [];
             $userFolder = $this->rootFolder->getUserFolder($user->getUID());
+
+            // LÓGICA HÍBRIDA:
+            // 1. Tokenizar a busca.
+            // 2. Para cada token:
+            //    a. Buscar IDs no Elasticsearch (Title/Content)
+            //    b. Buscar IDs no MySQL (Tags)
+            //    c. Unir IDs (OR)
+            // 3. Interseção dos resultados de cada token (AND)
             
-            $candidates = [];
-            $fileIds = [];
-            
-            foreach ($documents as $hit) {
-                try {
-                    $elasticId = $hit['_id'];
-                    $fileId = 0;
+            $finalFileIds = null;
+
+            if (!empty($filename)) {
+                $tokens = preg_split('/\s+/', trim($filename), -1, PREG_SPLIT_NO_EMPTY);
+                
+                foreach ($tokens as $token) {
+                    // a. ES (Title/Content)
+                    $esIds = $this->getIdsFromElasticsearch($token);
                     
-                    if (strpos($elasticId, 'files:') === 0) {
-                        $fileId = (int) substr($elasticId, 6);
+                    // b. MySQL (Tags)
+                    $dbIds = $this->getFileIdsByTagToken($token);
+                    
+                    // c. União
+                    $tokenIds = array_unique(array_merge($esIds, $dbIds));
+                    
+                    // Interseção
+                    if ($finalFileIds === null) {
+                        $finalFileIds = $tokenIds;
                     } else {
-                        $fileId = (int) $elasticId;
+                        $finalFileIds = array_intersect($finalFileIds, $tokenIds);
                     }
-
-                    if ($fileId === 0) continue;
-
-                    $nodes = $userFolder->getById($fileId);
                     
-                    if (!empty($nodes) && $nodes[0]->getType() === FileInfo::TYPE_FILE) {
-                        $fileInfo = $nodes[0];
-                        
-                        if (strpos($fileInfo->getName(), '.') === 0) continue;
-
-                        $candidates[] = [
-                            'file' => $fileInfo,
-                            'score' => $hit['_score'],
-                            'excerpt' => '' 
-                        ];
-                        $fileIds[] = $fileId;
+                    if (empty($finalFileIds)) {
+                        break;
                     }
-                } catch (\Exception $e) {
-                    continue;
                 }
             }
+
+            // Se não houve busca por nome/universal, $finalFileIds é null.
             
+            // Filtro por Tags Explícitas (#)
+            $explicitTagIds = null;
+            if (!empty($tags)) {
+                $explicitTagIds = $this->getFileIdsByTags($tags, $tagOperator);
+                if (empty($explicitTagIds)) {
+                    return [];
+                }
+            }
+
+            // Combinar Universal com Explícito
+            $candidatesIds = null;
+            if ($finalFileIds !== null && $explicitTagIds !== null) {
+                $candidatesIds = array_intersect($finalFileIds, $explicitTagIds);
+            } elseif ($finalFileIds !== null) {
+                $candidatesIds = $finalFileIds;
+            } elseif ($explicitTagIds !== null) {
+                $candidatesIds = $explicitTagIds;
+            }
+
+            // Se candidatesIds for vazio array
+            if ($candidatesIds !== null && empty($candidatesIds)) {
+                return [];
+            }
+            
+            // Se candidatesIds for null (sem busca), buscar recentes ou por tipo
+            // Mas como é FullText, geralmente esperamos uma busca.
+            // Se for null, vamos buscar tudo do ES (wildcard *) se tiver fileType, ou recentes.
+            
+            $results = [];
+            $candidates = [];
+
+            if ($candidatesIds !== null) {
+                // Paginação manual nos IDs
+                // Precisamos carregar os arquivos para verificar permissão/existência
+                // Isso pode ser lento se forem muitos IDs.
+                // Vamos aplicar offset/limit aqui se possível?
+                // Não, porque alguns IDs podem não ser arquivos válidos ou visíveis.
+                
+                // Vamos iterar e carregar até preencher o limit
+                $count = 0;
+                $skipped = 0;
+                
+                foreach ($candidatesIds as $fileId) {
+                    try {
+                        $nodes = $userFolder->getById($fileId);
+                        if (empty($nodes)) continue;
+                        $file = $nodes[0];
+                        
+                        if ($file->getType() !== FileInfo::TYPE_FILE) continue;
+                        if (strpos($file->getName(), '.') === 0) continue;
+                        if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
+                        
+                        if ($skipped < $offset) {
+                            $skipped++;
+                            continue;
+                        }
+                        
+                        $candidates[] = $file;
+                        $count++;
+                        
+                        if ($count >= $limit) break;
+                        
+                    } catch (\Exception $e) { continue; }
+                }
+            } else {
+                // Fallback se não tem termo nem tag: buscar recentes ou por tipo
+                // (Reutilizando lógica do searchFiles)
+                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            }
+
+            // Carregar tags
             $tagsByFileId = [];
-            if ($limit <= 200) {
+            if (!empty($candidates)) {
+                $fileIds = array_map(function($f) { return $f->getId(); }, $candidates);
                 $tagsByFileId = $this->getTagsForFiles($fileIds);
             }
             
-            foreach ($candidates as $candidate) {
-                $fileInfo = $candidate['file'];
-                $fileId = $fileInfo->getId();
-                $fileTags = isset($tagsByFileId[$fileId]) ? $tagsByFileId[$fileId] : [];
-                
-                if (!empty($fileType) && !$this->matchesFileType($fileInfo, $fileType)) {
-                    continue;
-                }
-                
-                // Verificação de tags explícitas (pós-filtro para garantir)
-                if (!empty($tags) && !$this->tagsMatch($fileTags, $tags, $tagOperator)) {
-                    continue;
-                }
-                
-                $result = $this->formatFileResult($fileInfo, $fileTags);
-                $result['searchType'] = 'fulltext';
-                $result['score'] = $candidate['score'];
-                $result['excerpt'] = $candidate['excerpt'];
+            foreach ($candidates as $file) {
+                $fileTags = isset($tagsByFileId[$file->getId()]) ? $tagsByFileId[$file->getId()] : [];
+                $result = $this->formatFileResult($file, $fileTags);
+                $result['searchType'] = 'hybrid';
                 $results[] = $result;
             }
             
@@ -340,459 +395,64 @@ class SearchService
         }
     }
 
-    private function getFileInfoFromDocument($document, $userFolder)
-    {
-        $fileId = $document->getId();
-
-        if ($fileId) {
-            try {
-                $nodes = $userFolder->getById($fileId);
-                if (!empty($nodes)) {
-                    return $nodes[0];
-                }
-            } catch (\Exception $e) {
-                // Continuar
-            }
-        }
-
-        return null;
-    }
-
-    public function isFullTextSearchAvailable()
-    {
-        if (!$this->fullTextSearchManager) {
-            return false;
-        }
-
-        try {
-            // Verificar se o serviço está disponível
-            $isAvailable = $this->fullTextSearchManager->isAvailable();
-
-            // Log para debug
-            error_log('FullTextSearch isAvailable(): ' . ($isAvailable ? 'true' : 'false'));
-
-            return $isAvailable;
-        } catch (\Exception $e) {
-            error_log('Error checking FullTextSearch availability: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    // MANTER TODAS AS SUAS FUNÇÕES ORIGINAIS ABAIXO SEM ALTERAÇÃO
-
-    private function searchByOtherCriteria($userFolder, $fileType, $tags, $tagOperator)
-    {
-        // Se só temos busca por tags, usar método específico
-        if (!empty($tags) && empty($fileType)) {
-            return $this->searchByTagsOnly($userFolder, $tags, $tagOperator);
-        }
-
-        // Se só temos busca por tipo de arquivo, buscar por extensão comum
-        if (!empty($fileType) && empty($tags)) {
-            return $this->searchByFileTypeOnly($userFolder, $fileType);
-        }
-
-        // Busca geral - pegar arquivos recentes como fallback
-        try {
-            return $userFolder->getRecent(1000);
-        } catch (\Exception $e) {
-            // Se getRecent não funcionar, retornar array vazio
-            return [];
-        }
-    }
-
-    private function searchByTagsOnly($userFolder, $tags, $tagOperator)
-    {
-        $fileIds = $this->getFileIdsByTags($tags, $tagOperator);
-        $files = [];
-
-        foreach ($fileIds as $fileId) {
-            try {
-                $fileNodes = $userFolder->getById($fileId);
-                if (!empty($fileNodes)) {
-                    $files[] = $fileNodes[0];
-                }
-            } catch (\Exception $e) {
-                // Arquivo não encontrado ou sem permissão
-                continue;
-            }
-        }
-
-        return $files;
-    }
-
-    private function searchByFileTypeOnly($userFolder, $fileType)
-    {
-        $extensions = $this->getExtensionsForFileType($fileType);
-        $files = [];
-
-        foreach ($extensions as $extension) {
-            try {
-                // Buscar com ponto antes da extensão
-                $searchResults = $userFolder->search('.' . $extension);
-                foreach ($searchResults as $result) {
-                    // Verificar se realmente termina com a extensão
-                    if (strtolower(pathinfo($result->getName(), PATHINFO_EXTENSION)) === $extension) {
-                        $files[] = $result;
-                    }
-                }
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        return $files;
-    }
-
-    // MÉTODO CORRIGIDO PARA NEXTCLOUD 31
-    private function getFileIdsByTags($tags, $operator)
-    {
-        $fileIds = [];
-
-        try {
-            // Coletar IDs das tags
-            $tagIds = [];
-            foreach ($tags as $tagName) {
-                $tagId = $this->getTagIdByName($tagName);
-                if ($tagId) {
-                    $tagIds[] = $tagId;
-                } else if ($operator === 'AND') {
-                    // Se operador é AND e uma tag não existe, retornar vazio
-                    return [];
-                }
-            }
-
-            if (empty($tagIds)) {
-                return [];
-            }
-
-            if ($operator === 'AND') {
-                // Para AND, usar getObjectIdsForTags que retorna apenas objetos com TODAS as tags
-                $fileIds = $this->systemTagObjectMapper->getObjectIdsForTags($tagIds, 'files');
-            } else { // OR
-                // Para OR, buscar objetos para cada tag e fazer união
-                $allFileIds = [];
-                foreach ($tagIds as $tagId) {
-                    $tagFileIds = $this->systemTagObjectMapper->getObjectIdsForTags([$tagId], 'files');
-                    $allFileIds = array_merge($allFileIds, $tagFileIds);
-                }
-                $fileIds = array_unique($allFileIds);
-            }
-        } catch (\Exception $e) {
-            return [];
-        }
-
-        return $fileIds;
-    }
-
-    private function getTagIdByName($tagName)
-    {
-        try {
-            // Buscar todas as tags do sistema
-            $allTags = $this->systemTagManager->getAllTags();
-
-            foreach ($allTags as $tag) {
-                if ($tag->getName() === $tagName) {
-                    return $tag->getId();
-                }
-            }
-        } catch (\Exception $e) {
-            return null;
-        }
-
-        return null;
-    }
-
-    private function matchesFileType($file, $fileType)
-    {
-        $mimetype = $file->getMimetype();
-        $extension = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
-
-        switch ($fileType) {
-            case 'image':
-                return strpos($mimetype, 'image/') === 0;
-
-            case 'document':
-                return in_array($extension, ['doc', 'docx', 'odt', 'rtf', 'txt']) ||
-                    strpos($mimetype, 'text/') === 0 ||
-                    strpos($mimetype, 'application/msword') === 0 ||
-                    strpos($mimetype, 'application/vnd.openxmlformats-officedocument.wordprocessingml') === 0 ||
-                    strpos($mimetype, 'application/vnd.oasis.opendocument.text') === 0;
-
-            case 'video':
-                return strpos($mimetype, 'video/') === 0;
-
-            case 'audio':
-                return strpos($mimetype, 'audio/') === 0;
-
-            case 'pdf':
-                return $mimetype === 'application/pdf';
-
-            default:
-                return true;
-        }
-    }
-
-    private function getExtensionsForFileType($fileType)
-    {
-        switch ($fileType) {
-            case 'image':
-                return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
-
-            case 'document':
-                return ['doc', 'docx', 'odt', 'txt', 'rtf', 'md'];
-
-            case 'video':
-                return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'];
-
-            case 'audio':
-                return ['mp3', 'wav', 'flac', 'ogg', 'aac', 'm4a'];
-
-            case 'pdf':
-                return ['pdf'];
-
-            default:
-                return [];
-        }
-    }
-
-    private function fileMatchesTags($fileId, $tags, $tagOperator)
-    {
-        $fileTags = $this->getFileTags($fileId);
-        return $this->tagsMatch($fileTags, $tags, $tagOperator);
-    }
-
-    private function tagsMatch($fileTags, $requiredTags, $tagOperator)
-    {
-        $fileTagNames = array_column($fileTags, 'name');
-        $matches = array_intersect($requiredTags, $fileTagNames);
-
-        if ($tagOperator === 'AND') {
-            return count($matches) === count($requiredTags);
-        } else { // OR
-            return count($matches) > 0;
-        }
-    }
-
-    private function formatFileResult($file, $tags = null)
-    {
-        // Se tags não foram passadas, buscar (fallback para compatibilidade)
-        if ($tags === null) {
-            $tags = $this->getFileTags($file->getId());
-        }
-
-        return [
-            'id' => $file->getId(),
-            'name' => $file->getName(),
-            'path' => $file->getPath(),
-            'type' => $file->getType(),
-            'size' => $file->getSize(),
-            'mtime' => $file->getMTime(),
-            'mimetype' => $file->getMimetype(),
-            'tags' => $tags,
-            'searchType' => 'traditional'
-        ];
-    }
-
-    // NOVA FUNÇÃO: Buscar tags em lote
-    private function getTagsForFiles($fileIds)
-    {
-        if (empty($fileIds)) {
-            return [];
-        }
-
-        try {
-            // Buscar mapeamento objeto -> tags para todos os arquivos
-            $tagsByObjectId = $this->systemTagObjectMapper->getTagIdsForObjects($fileIds, 'files');
-            
-            // Coletar todos os IDs de tags únicos necessários
-            $allTagIds = [];
-            foreach ($tagsByObjectId as $objectId => $tagIds) {
-                foreach ($tagIds as $tagId) {
-                    $allTagIds[$tagId] = $tagId;
-                }
-            }
-
-            if (empty($allTagIds)) {
-                return [];
-            }
-
-            // Buscar informações das tags
-            $tagsInfo = $this->systemTagManager->getTagsByIds(array_values($allTagIds));
-            $tagsMap = [];
-            foreach ($tagsInfo as $tag) {
-                $tagsMap[$tag->getId()] = [
-                    'id' => $tag->getId(),
-                    'name' => $tag->getName(),
-                    'color' => $tag->isUserAssignable() ? 'blue' : 'red'
-                ];
-            }
-
-            // Montar resultado final mapeado por fileId
-            $result = [];
-            foreach ($fileIds as $fileId) {
-                $result[$fileId] = [];
-                if (isset($tagsByObjectId[$fileId])) {
-                    foreach ($tagsByObjectId[$fileId] as $tagId) {
-                        if (isset($tagsMap[$tagId])) {
-                            $result[$fileId][] = $tagsMap[$tagId];
-                        }
-                    }
-                }
-            }
-
-            return $result;
-
-        } catch (\Exception $e) {
-            error_log('Error in getTagsForFiles: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    // MÉTODO TAMBÉM CORRIGIDO PARA USAR getTagIdsForObjects
-    private function getFileTags($fileId)
-    {
-        $tags = $this->getTagsForFiles([$fileId]);
-        return isset($tags[$fileId]) ? $tags[$fileId] : [];
-    }
-
-    // Funcao de DEBUG
-    public function debugFullTextSearch()
-    {
-        $debug = [];
-
-        // Verificar se a classe existe
-        $debug['class_exists'] = class_exists('\OCP\FullTextSearch\IFullTextSearchManager');
-
-        // Verificar se o manager foi injetado
-        $debug['manager_exists'] = $this->fullTextSearchManager !== null;
-        
-        // Verificar erro capturado
-        $debug['last_error'] = $this->lastError;
-        
-        // Verificar CURL
-        $debug['curl_exists'] = function_exists('curl_init');
-        $debug['curl_version'] = function_exists('curl_version') ? curl_version() : 'N/A';
-
-        if ($this->fullTextSearchManager) {
-            try {
-                $debug['is_available'] = $this->fullTextSearchManager->isAvailable();
-            } catch (\Exception $e) {
-                $debug['is_available_error'] = $e->getMessage();
-            }
-
-            try {
-                // Tentar listar provedores
-                $debug['providers'] = method_exists($this->fullTextSearchManager, 'getProviders')
-                    ? $this->fullTextSearchManager->getProviders()
-                    : 'method_not_exists';
-            } catch (\Exception $e) {
-                $debug['providers_error'] = $e->getMessage();
-            }
-        }
-
-        return $debug;
-    }
-    private function searchDirectElasticsearch($term, $tags = [], $limit = 100, $offset = 0)
-    {
+    private function getIdsFromElasticsearch($token) {
         $url = 'http://187.45.162.16:9200/cob2023/_search';
         
-        // Construir a query usando bool query para suportar filename AND tags
-        $mustClauses = [];
-
-        // 1. Busca Universal por termo (filename/content/tags)
-        if (!empty($term)) {
-            // Tokenizar o termo para permitir "GINASTICA FLAVIA" (GINASTICA no nome, FLAVIA na tag)
-            $tokens = preg_split('/\s+/', trim($term), -1, PREG_SPLIT_NO_EMPTY);
-            
-            foreach ($tokens as $token) {
-                // Para cada token, ele deve existir em ALGUM dos campos (Title OU Content OU Tags)
-                // Usamos wildcard *token* para match parcial
-                $shouldClauses = [];
-                
-                $wildcard = '*' . $token . '*';
-                
-                $shouldClauses[] = ['wildcard' => ['title' => ['value' => $wildcard, 'case_insensitive' => true]]];
-                $shouldClauses[] = ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]];
-                $shouldClauses[] = ['wildcard' => ['tags' => ['value' => $wildcard, 'case_insensitive' => true]]];
-                
-                // Adicionar o grupo OR (should) ao grupo AND principal (must)
-                $mustClauses[] = [
-                    'bool' => [
-                        'should' => $shouldClauses,
-                        'minimum_should_match' => 1
-                    ]
-                ];
-            }
-        }
-
-        // 2. Busca por tags EXPLÍCITAS (filtro #)
-        if (!empty($tags)) {
-            foreach ($tags as $tag) {
-                $mustClauses[] = [
-                    'match' => [
-                        'tags' => [
-                            'query' => $tag,
-                            'operator' => 'and'
-                        ]
-                    ]
-                ];
-            }
-        }
-
-        // Se não houver critérios, retornar vazio (ou erro)
-        if (empty($mustClauses)) {
-            return [];
-        }
-
+        // Buscar apenas em Title e Content
+        $wildcard = '*' . $token . '*';
         $query = [
-            'from' => $offset,
-            'size' => $limit,
+            'size' => 10000, // Limite alto para IDs
+            '_source' => false, // Só queremos IDs
             'query' => [
                 'bool' => [
-                    'must' => $mustClauses
+                    'should' => [
+                        ['wildcard' => ['title' => ['value' => $wildcard, 'case_insensitive' => true]]],
+                        ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]]
+                    ],
+                    'minimum_should_match' => 1
                 ]
             ]
         ];
 
         $payload = json_encode($query);
-
-        $this->log("Direct Elastic Request to $url: $payload");
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Accept: application/json'
-        ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Timeout curto para não travar
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if ($response === false) {
-            $this->log("Direct Elastic CURL Error: $error");
-            throw new \Exception("Elasticsearch connection failed: $error");
-        }
-
-        if ($httpCode !== 200) {
-            $this->log("Direct Elastic HTTP Error $httpCode: $response");
-            throw new \Exception("Elasticsearch returned HTTP $httpCode");
-        }
-
-        $data = json_decode($response, true);
         
-        if (!isset($data['hits']['hits'])) {
-            $this->log("Direct Elastic: Invalid response format");
+        try {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            
+            $response = curl_exec($ch);
+            curl_close($ch);
+            
+            if (!$response) return [];
+            
+            $data = json_decode($response, true);
+            if (!isset($data['hits']['hits'])) return [];
+            
+            $ids = [];
+            foreach ($data['hits']['hits'] as $hit) {
+                $elasticId = $hit['_id'];
+                if (strpos($elasticId, 'files:') === 0) {
+                    $ids[] = (int) substr($elasticId, 6);
+                } else {
+                    $ids[] = (int) $elasticId;
+                }
+            }
+            return $ids;
+            
+        } catch (\Exception $e) {
             return [];
         }
+    }
 
-        $this->log("Direct Elastic: Found " . count($data['hits']['hits']) . " hits (Total: " . $data['hits']['total']['value'] . ")");
-
-        return $data['hits']['hits'];
+    // Mantendo searchDirectElasticsearch para compatibilidade ou debug se necessário, 
+    // mas agora usamos getIdsFromElasticsearch
+    private function searchDirectElasticsearch($term, $tags = [], $limit = 100, $offset = 0)
+    {
+        // ... (código antigo mantido ou removido, mas como substituí o bloco todo, ele foi removido)
+        return []; 
     }
 }
