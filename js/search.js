@@ -673,8 +673,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const isVideo = file.mimetype?.startsWith('video/');
             const isAudio = file.mimetype?.startsWith('audio/') || file.name.toLowerCase().endsWith('.cfa');
             
-            // Apenas imagens tentam carregar thumbnail
-            const hasThumbnail = isImage;
+            // Imagens e Vídeos tentam carregar thumbnail
+            const hasThumbnail = isImage || isVideo;
 
             const fileCard = document.createElement('div');
             fileCard.className = 'file-card';
@@ -733,6 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 justify-content: center;
                 background: var(--color-background-dark);
                 position: relative;
+                overflow: hidden;
             `;
 
             if (hasThumbnail) {
@@ -744,40 +745,54 @@ document.addEventListener('DOMContentLoaded', function () {
                     width: 100%;
                     height: 100%;
                     object-fit: cover;
+                    position: absolute;
+                    top: 0;
+                    left: 0;
                 `;
                 
                 // Error handling: fallback to icon
                 img.onerror = function() {
                     console.warn('Falha ao carregar miniatura para:', file.name);
                     this.style.display = 'none';
-                    const fileIcon = document.createElement('div');
-                    fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
-                    fileIcon.style.fontSize = '48px';
-                    thumbnailArea.appendChild(fileIcon);
+                    
+                    // Se for imagem e falhar, mostra ícone. Se for vídeo e falhar, o ícone de play (adicionado abaixo) já serve, mas precisamos de um fundo ou ícone de arquivo atrás.
+                    if (isImage) {
+                        const fileIcon = document.createElement('div');
+                        fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
+                        fileIcon.style.fontSize = '48px';
+                        // Limpar conteúdo anterior (img oculta) para centralizar ícone
+                        thumbnailArea.innerHTML = ''; 
+                        thumbnailArea.appendChild(fileIcon);
+                    }
+                    // Se for vídeo, o ícone de play será adicionado depois, então não precisamos fazer nada aqui além de ocultar a imagem
                 };
 
                 thumbnailArea.appendChild(img);
-            } else if (isVideo || isAudio) {
-                // Ícone de PLAY para vídeo e áudio
+            }
+
+            if (isVideo || isAudio) {
+                // Ícone de PLAY para vídeo e áudio (Overlay)
                 const playIcon = document.createElement('div');
-                // Usando um caractere unicode de Play ou ícone do sistema se disponível
-                // Vamos usar um estilo visual de botão de play
                 playIcon.innerHTML = '▶'; 
                 playIcon.style.cssText = `
                     font-size: 48px;
                     color: var(--color-text-maxcontrast);
-                    background: rgba(0,0,0,0.3);
-                    width: 80px;
-                    height: 80px;
+                    background: rgba(0,0,0,0.5);
+                    width: 64px;
+                    height: 64px;
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    padding-left: 8px; /* Ajuste visual para centralizar o triângulo */
+                    padding-left: 6px;
                     border: 2px solid var(--color-text-maxcontrast);
+                    z-index: 2; /* Ficar acima da imagem */
+                    position: relative; /* Para centralizar no flex container */
                 `;
                 thumbnailArea.appendChild(playIcon);
-            } else {
+            } 
+            
+            if (!hasThumbnail && !isVideo && !isAudio) {
                 const fileIcon = document.createElement('div');
                 fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
                 fileIcon.style.fontSize = '48px';
@@ -877,107 +892,187 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function playVideo(file) {
+        // Criar modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        `;
 
-    function setView(view) {
-        if (view === currentView) return; // Não fazer nada se a visualização não mudou
+        // Botão fechar
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '×';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+            z-index: 10001;
+        `;
+        closeBtn.onclick = () => document.body.removeChild(modal);
+        modal.appendChild(closeBtn);
 
-        currentView = view;
+        // Container do vídeo
+        const videoContainer = document.createElement('div');
+        videoContainer.style.cssText = `
+            width: 80%;
+            max-width: 1000px;
+            max-height: 80vh;
+            background: black;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        `;
 
-        if (view === 'list' && viewListBtn && viewGridBtn) {
-            viewListBtn.classList.add('active');
-            viewGridBtn.classList.remove('active');
-        } else if (view === 'grid' && viewListBtn && viewGridBtn) {
-            viewGridBtn.classList.add('active');
-            viewListBtn.classList.remove('active');
-        }
+        const video = document.createElement('video');
+        video.controls = true;
+        video.autoplay = true;
+        video.style.width = '100%';
+        video.style.height = '100%';
+        
+        // URL de download direto
+        const downloadUrl = OC.generateUrl('/apps/files/download/' + file.id);
+        video.src = downloadUrl;
 
-        // Se houver resultados sendo exibidos, redesenhar com a nova visualização
-        if (lastSearchParams && totalResults > 0) {
-            // Obter os arquivos novamente com os mesmos parâmetros
-            const offset = (currentPage - 1) * pageSize;
-
-            fetch(OC.generateUrl('/apps/advancedsearch/api/search'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'requesttoken': OC.requestToken
-                },
-                body: JSON.stringify({
-                    ...lastSearchParams,
-                    limit: pageSize,
-                    offset: offset
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        displayResults(data.files, offset);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao recarregar resultados:', error);
-                });
-        }
-    }
-
-    function getFileIcon(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-
-        const iconMap = {
-            'pdf': 'icon-filetype-pdf',
-            'doc': 'icon-filetype-document',
-            'docx': 'icon-filetype-document',
-            'xls': 'icon-filetype-spreadsheet',
-            'xlsx': 'icon-filetype-spreadsheet',
-            'ppt': 'icon-filetype-presentation',
-            'pptx': 'icon-filetype-presentation',
-            'txt': 'icon-filetype-text',
-            'jpg': 'icon-filetype-image',
-            'jpeg': 'icon-filetype-image',
-            'png': 'icon-filetype-image',
-            'gif': 'icon-filetype-image',
-            'mp4': 'icon-filetype-video',
-            'avi': 'icon-filetype-video',
-            'mp3': 'icon-filetype-audio',
-            'wav': 'icon-filetype-audio',
-            'zip': 'icon-filetype-archive',
-            'rar': 'icon-filetype-archive'
+        // Tratamento de erro
+        video.onerror = () => {
+            console.error('Erro ao reproduzir vídeo:', file.name);
+            videoContainer.innerHTML = `
+                <div style="padding: 40px; text-align: center; color: white;">
+                    <p>Não foi possível reproduzir este formato de vídeo (${file.mimetype}) no navegador.</p>
+                    <a href="${downloadUrl}" class="button primary" download>Baixar Arquivo</a>
+                </div>
+            `;
         };
 
-        return iconMap[ext] || 'icon-filetype-file';
+        videoContainer.appendChild(video);
+        modal.appendChild(videoContainer);
+        
+        // Título
+        const title = document.createElement('div');
+        title.textContent = file.name;
+        title.style.cssText = `
+            color: white;
+            margin-top: 16px;
+            font-size: 18px;
+        `;
+        modal.appendChild(title);
+
+        // Fechar ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+
+        document.body.appendChild(modal);
     }
 
-    function showLoading() {
-        if (loading) loading.classList.remove('hidden');
-        if (emptyContent) emptyContent.classList.add('hidden');
-        if (fileTable) fileTable.classList.add('hidden');
-        fileList.innerHTML = '';
-        if (pagination) pagination.classList.add('hidden');
-    }
+    function handleFileClick(event) {
+        console.log('handleFileClick chamado');
+        const row = event.target.closest('.file-row') || event.target.closest('.file-card');
+        if (!row) return;
 
-    function hideLoading() {
-        if (loading) loading.classList.add('hidden');
-    }
+        const file = row.fileData;
+        if (!file) return;
 
-    function showEmptyContent() {
-        if (emptyContent) emptyContent.classList.remove('hidden');
-        if (fileTable) fileTable.classList.add('hidden');
-        fileList.innerHTML = '';
-        if (pagination) pagination.classList.add('hidden');
-    }
+        console.log('Arquivo clicado:', file);
 
-    function hideEmptyContent() {
-        if (emptyContent) emptyContent.classList.add('hidden');
-        if (fileTable) fileTable.classList.remove('hidden');
-    }
+        const isImage = file.mimetype.startsWith('image/');
+        const isVideo = file.mimetype.startsWith('video/');
 
-    function showError(message) {
-        showEmptyContent();
-        document.querySelector('#emptycontent h2').textContent = 'Erro';
-        document.querySelector('#emptycontent p').textContent = message;
-    }
+        if (isVideo) {
+            console.log('É vídeo. Tentando reproduzir com modal.');
+            playVideo(file);
+            return;
+        }
 
-    function formatFileSize(bytes) {
+        if (isImage) {
+            console.log('É imagem. Tentando abrir Viewer.');
+            // Abrir com Viewer nativo
+            if (window.OCA && window.OCA.Viewer) {
+                console.log('OCA.Viewer disponível');
+                
+                let cleanPath = file.path;
+                
+                // Lógica de limpeza de caminho
+                // O Viewer precisa do caminho relativo ao root do usuário (ex: /Fotos/img.jpg)
+                // O file.path pode vir como /files/USER/Fotos/img.jpg
+                
+                // Tentar usar o OC.currentUser se disponível
+                if (window.OC && window.OC.currentUser) {
+                    const userFilesPrefix = '/' + window.OC.currentUser + '/files';
+                    if (cleanPath.includes(userFilesPrefix)) {
+                        cleanPath = cleanPath.substring(cleanPath.indexOf(userFilesPrefix) + userFilesPrefix.length);
+                    }
+                }
+                
+                // Fallback: se ainda parecer ter prefixos de sistema, tentar limpar
+                // Ex: /admin/files/Pasta -> /Pasta
+                const parts = cleanPath.split('/');
+                if (parts.length > 3 && (parts[1] === 'files' || parts[2] === 'files')) {
+                     // Heurística: encontrar onde está o 'files' e pegar o que vem depois do user
+                     const filesIndex = parts.indexOf('files');
+                     if (filesIndex !== -1 && parts.length > filesIndex + 2) {
+                         // parts[filesIndex] é 'files'
+                         // parts[filesIndex+1] é o usuário
+                         // O resto é o caminho
+                         const potentialPath = '/' + parts.slice(filesIndex + 2).join('/');
+                         // Só usar se for mais curto que o original
+                         if (potentialPath.length < cleanPath.length) {
+                             cleanPath = potentialPath;
+                         }
+                     }
+                }
+
+                console.log('Caminho limpo para o Viewer:', cleanPath);
+                
+                // Garantir que a aba de metadados esteja registrada
+                if (typeof ensureMetadataTabRegistered === 'function') {
+                    ensureMetadataTabRegistered();
+                }
+                
+                // Tentar abrir o Viewer
+                // Passar o fileId também pode ajudar se o Viewer suportar
+                try {
+                    // O método open requer um objeto na nova versão
+                    console.log('Chamando OCA.Viewer.open com objeto:', { path: cleanPath, fileId: file.id });
+                    window.OCA.Viewer.open({
+                        path: cleanPath,
+                        fileId: file.id,
+                        sidebar: true
+                    });
+                } catch (e) {
+                    console.error('Erro ao chamar OCA.Viewer.open:', e);
+                    // Fallback para nova aba
+                    window.open(OC.generateUrl('/apps/files/?fileid=' + file.id), '_blank');
+                }
+            } else {
+                console.error('OCA.Viewer não disponível (window.OCA.Viewer undefined)');
+                console.log('window.OCA:', window.OCA);
+                // Fallback
+                window.open(OC.generateUrl('/apps/files/?fileid=' + file.id), '_blank');
+            }
+        } else {
+            console.log('Não é imagem/vídeo. Redirecionando para Files.');
+            // Para outros arquivos, abrir na visualização de arquivos
+            window.location.href = OC.generateUrl('/apps/files/?fileid=' + file.id);
+        }
+    }    function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
