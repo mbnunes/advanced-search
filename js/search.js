@@ -196,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function performSearch(page = 1) {
+        console.log('performSearch chamado para página', page);
         let filenameInput = document.getElementById('filename').value;
         const hiddenTagsInput = document.getElementById('tags').value;
         let tagOperator = document.querySelector('input[name="tagOperator"]:checked').value;
