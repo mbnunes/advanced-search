@@ -656,7 +656,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    async function displayGridView(files) {
+    function displayGridView(files) {
+        console.log('displayGridView iniciado. Arquivos:', files.length);
+        
+        if (!fileList) {
+            console.error('ERRO CRÍTICO: fileList não encontrado!');
+            return;
+        }
+
+        // Garantir que a lista está visível
+        fileList.classList.remove('hidden');
+        console.log('fileList classes:', fileList.className);
+
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
         gridContainer.style.cssText = `
@@ -891,8 +902,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        }
+
+        console.log('Limpando fileList e adicionando gridContainer com', gridContainer.children.length, 'cards');
         fileList.innerHTML = '';
         fileList.appendChild(gridContainer);
+        console.log('fileList atualizado. Novo conteúdo HTML length:', fileList.innerHTML.length);
 
         if (fileTable) {
             fileTable.classList.remove('list-view');
