@@ -166,6 +166,8 @@ style('advancedsearch', 'style');
                 </tbody>
             </table>
             
+            <div id="fileGrid" class="hidden"></div>
+            
             
         </div>
         

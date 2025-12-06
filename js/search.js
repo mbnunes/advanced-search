@@ -374,12 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
             pagination.classList.add('hidden');
             return;
         }
-
-        // Atualizar informação
-        const start = (currentPage - 1) * pageSize + 1;
-        const end = Math.min(currentPage * pageSize, totalResults);
-        if (paginationInfo) {
-            paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalResults} resultados`;
+        paginationInfo.textContent = `${start}-${end} de ${totalResults} resultados`;
         }
 
         // Habilitar/desabilitar botões
@@ -559,6 +554,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (tagAndRadio) tagAndRadio.checked = true;
 
         fileList.innerHTML = '';
+        if (fileGrid) fileGrid.innerHTML = '';
         if (resultCount) resultCount.textContent = '';
 
         // Voltar ao estado inicial
@@ -600,6 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Limpar a área de resultados
         fileList.innerHTML = '';
+        if (fileGrid) fileGrid.innerHTML = '';
 
         // Verificar qual visualização usar
         if (currentView === 'list') {
@@ -650,6 +647,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         fileList.innerHTML = html;
 
+        if (fileTable) fileTable.classList.remove('hidden');
+        if (fileGrid) fileGrid.classList.add('hidden');
+        
         if (fileTable) {
             fileTable.classList.add('list-view');
             fileTable.classList.remove('grid-view');
@@ -659,14 +659,14 @@ document.addEventListener('DOMContentLoaded', function () {
     function displayGridView(files) {
         console.log('displayGridView iniciado. Arquivos:', files.length);
         
-        if (!fileList) {
-            console.error('ERRO CRÍTICO: fileList não encontrado!');
+        if (!fileGrid) {
+            console.error('ERRO CRÍTICO: fileGrid não encontrado!');
             return;
         }
 
         // Garantir que a lista está visível
-        fileList.classList.remove('hidden');
-        console.log('fileList classes:', fileList.className);
+        fileGrid.classList.remove('hidden');
+        if (fileTable) fileTable.classList.add('hidden');
 
         const gridContainer = document.createElement('div');
         gridContainer.className = 'grid-container';
@@ -904,15 +904,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-        console.log('Limpando fileList e adicionando gridContainer com', gridContainer.children.length, 'cards');
-        fileList.innerHTML = '';
-        fileList.appendChild(gridContainer);
-        console.log('fileList atualizado. Novo conteúdo HTML length:', fileList.innerHTML.length);
-
-        if (fileTable) {
-            fileTable.classList.remove('list-view');
-            fileTable.classList.add('grid-view');
-        }
+        console.log('Limpando fileGrid e adicionando gridContainer com', gridContainer.children.length, 'cards');
+        fileGrid.innerHTML = '';
+        fileGrid.appendChild(gridContainer);
+        console.log('fileGrid atualizado.');
     }
 
     function playVideo(file) {
@@ -1100,18 +1095,20 @@ document.addEventListener('DOMContentLoaded', function () {
     function showLoading() {
         if (loading) loading.classList.remove('hidden');
         if (fileList) fileList.classList.add('hidden');
+        if (fileGrid) fileGrid.classList.add('hidden');
         if (emptyContent) emptyContent.classList.add('hidden');
         if (pagination) pagination.classList.add('hidden');
     }
 
     function hideLoading() {
         if (loading) loading.classList.add('hidden');
-        if (fileList) fileList.classList.remove('hidden');
+        // Não removemos hidden de fileList/fileGrid aqui, pois displayResults fará isso
     }
 
     function showEmptyContent() {
         if (emptyContent) emptyContent.classList.remove('hidden');
         if (fileList) fileList.innerHTML = '';
+        if (fileGrid) fileGrid.innerHTML = '';
         if (pagination) pagination.classList.add('hidden');
     }
 
@@ -1277,9 +1274,11 @@ var ensureMetadataTabRegistered = function() {
         
         class MetadataTab extends OCA.Files.Sidebar.Tab {
             constructor() {
-                super('advancedSearchMetadata');
-                this.name = 'Metadados';
-                this.icon = 'icon-info';
+                super({
+                    id: 'advancedSearchMetadata',
+                    name: 'Metadados',
+                    icon: 'icon-info'
+                });
                 this._advancedSearchRegistered = true;
                 console.log('MetadataTab initialized');
             }
