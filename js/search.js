@@ -376,7 +376,11 @@ document.addEventListener('DOMContentLoaded', function () {
             pagination.classList.add('hidden');
             return;
         }
-        paginationInfo.textContent = `${start}-${end} de ${totalResults} resultados`;
+        // Atualizar informação
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalResults);
+        if (paginationInfo) {
+            paginationInfo.textContent = `${start}-${end} de ${totalResults} resultados`;
         }
 
         // Habilitar/desabilitar botões
