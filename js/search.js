@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
     const fileList = document.getElementById('fileList');
+    const fileGrid = document.getElementById('fileGrid');
     const emptyContent = document.getElementById('emptycontent');
     const loading = document.getElementById('loading');
     const resultCount = document.getElementById('result-count');
