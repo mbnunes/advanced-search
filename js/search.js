@@ -902,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        }
+
 
         console.log('Limpando fileList e adicionando gridContainer com', gridContainer.children.length, 'cards');
         fileList.innerHTML = '';
