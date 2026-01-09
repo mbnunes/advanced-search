@@ -330,20 +330,30 @@ class SearchService
                     $dbIds = $this->getFileIdsByTagToken($token);
                     $this->log("DEBUG: DB IDs for '$token': " . count($dbIds));
                     
-                    // c. União
+                    // c. União (ES + DB TagToken)
                     $tokenIds = array_unique(array_merge($esIds, $dbIds));
                     
-                    // Interseção
+                    // Lógica de Combinação dos Tokens (Universal)
                     if ($finalFileIds === null) {
                         $finalFileIds = $tokenIds;
                     } else {
-                        $finalFileIds = array_intersect($finalFileIds, $tokenIds);
+                        if ($tagOperator === 'OR') {
+                            // Se o operador global for OR, queremos a SOMA das buscas (Token A OR Token B)
+                            $finalFileIds = array_unique(array_merge($finalFileIds, $tokenIds));
+                        } else {
+                            // Se for AND (padrão), reduzimos (Token A AND Token B)
+                            $finalFileIds = array_intersect($finalFileIds, $tokenIds);
+                        }
                     }
-                    $this->log("DEBUG: Final IDs after token '$token': " . count($finalFileIds));
+                    $this->log("DEBUG: Final IDs after token '$token' (Op: $tagOperator): " . count($finalFileIds));
                     
                     if (empty($finalFileIds)) {
-                        $this->log("DEBUG: No IDs remaining after token '$token'. Breaking.");
-                        break;
+                        $this->log("DEBUG: No IDs remaining after token '$token'.");
+                        if ($tagOperator !== 'OR') {
+                            // Só para o loop se for AND. Se for OR, pode continuar tentando outros tokens.
+                             $this->log("DEBUG: Breaking loop because AND operator resulted in empty.");
+                             break;
+                        }
                     }
                 } // End foreach tokens
             }
