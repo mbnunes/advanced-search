@@ -285,10 +285,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const hiddenTags = hiddenTagsInput ? hiddenTagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
         const finalTags = [...new Set([...parsedTags, ...hiddenTags])]; // Unique tags
 
-        // If we extracted tags from input, force AND operator as implied by "Search #tag"
-        if (parsedTags.length > 0) {
-            tagOperator = 'AND';
-        }
+        // REMOVED: Force AND was conflicting with Broad Search (which sets OR)
+        // if (parsedTags.length > 0) {
+        //    tagOperator = 'AND';
+        // }
 
         // Validação básica
         if (!cleanFilename && finalTags.length === 0 && !fileType) {
