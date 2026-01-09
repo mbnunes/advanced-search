@@ -345,16 +345,18 @@ class SearchService
                         $this->log("DEBUG: No IDs remaining after token '$token'. Breaking.");
                         break;
                     }
-                }
+                } // End foreach tokens
             }
+            $this->log("DEBUG: Token loop finished. Final IDs count: " . ($finalFileIds === null ? 'NULL' : count($finalFileIds)));
 
-            // Se não houve busca por nome/universal, $finalFileIds é null.
-            
             // Filtro por Tags Explícitas (#)
             $explicitTagIds = null;
+            $this->log("DEBUG: Checking explicit tags: " . json_encode($tags));
             if (!empty($tags)) {
                 $explicitTagIds = $this->getFileIdsByTags($tags, $tagOperator);
+                $this->log("DEBUG: Explicit tag IDs count: " . count($explicitTagIds));
                 if (empty($explicitTagIds)) {
+                    $this->log("DEBUG: Explicit tags returned empty. Returning [].");
                     return [];
                 }
             }
@@ -377,6 +379,7 @@ class SearchService
                 $candidatesIds = $explicitTagIds;
                 $this->log("DEBUG: Only Tag results: " . count($candidatesIds));
             }
+            $this->log("DEBUG: Candidates determined. Count: " . ($candidatesIds === null ? 'NULL' : count($candidatesIds)));
 
             // Se candidatesIds for vazio array
             if ($candidatesIds !== null && empty($candidatesIds)) {
