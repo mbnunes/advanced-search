@@ -447,17 +447,31 @@ class SearchService
         $url = 'http://187.45.162.16:9200/cob2023/_search';
         
         // Buscar apenas em Title e Content
-        $wildcard = '*' . $token . '*';
-        $query = [
-            'size' => 10000, // Limite alto para IDs
-            '_source' => false, // Só queremos IDs
-            'query' => [
+        // Dividir termos por espaço para permitir buscas compostas (ex: "BAS SIDNEY")
+        $terms = array_filter(explode(' ', $token), function($t) { return !empty(trim($t)); });
+        
+        if (empty($terms)) return [];
+
+        $mustClauses = [];
+        foreach ($terms as $term) {
+            $wildcard = '*' . $term . '*';
+            $mustClauses[] = [
                 'bool' => [
                     'should' => [
                         ['wildcard' => ['title' => ['value' => $wildcard, 'case_insensitive' => true]]],
                         ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]]
                     ],
                     'minimum_should_match' => 1
+                ]
+            ];
+        }
+
+        $query = [
+            'size' => 10000,
+            '_source' => false,
+            'query' => [
+                'bool' => [
+                    'must' => $mustClauses
                 ]
             ]
         ];
