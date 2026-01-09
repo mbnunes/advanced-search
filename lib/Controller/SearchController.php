@@ -33,7 +33,9 @@ class SearchController extends Controller
             $timestamp = date('Y-m-d H:i:s');
             file_put_contents($logFile, "[$timestamp] Controller: search() called\n", FILE_APPEND);
 
-            $debug = $this->searchService->debugFullTextSearch();
+
+            // REMOVED LEGACY DEBUG OVERWRITE
+            // $debug = $this->searchService->debugFullTextSearch();
 
             // Extrair parâmetros com valores padrão
             $filename = isset($params['filename']) ? trim($params['filename']) : '';
