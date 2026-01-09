@@ -477,8 +477,9 @@ class SearchService
             }
 
             // Carregar tags
+            // Carregar tags (OTIMIZAÇÃO: Apenas se limite for baixo)
             $tagsByFileId = [];
-            if (!empty($candidates)) {
+            if (!empty($candidates) && $limit <= 200) {
                 $fileIds = array_map(function($f) { return $f->getId(); }, $candidates);
                 $tagsByFileId = $this->getTagsForFiles($fileIds);
             }

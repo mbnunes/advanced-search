@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             body: JSON.stringify({
                 ...params,
-                limit: 15000,
+                limit: 9999,
                 offset: 0
             })
         })
