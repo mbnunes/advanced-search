@@ -1,6 +1,17 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
+    // --- CONFIGURATION ---
+    // List of file extensions to exclude from search results
+    // You can add or remove extensions here as needed.
+    const EXCLUDED_EXTENSIONS = [
+        '.xls',
+        '.pdf',
+        '.txt',
+        '.xlsx'
+    ];
+    // ---------------------
+
     // Elementos principais
     const searchBtn = document.getElementById('search-btn');
     const clearBtn = document.getElementById('clear-btn');
@@ -278,7 +289,8 @@ document.addEventListener('DOMContentLoaded', function () {
             fileType: fileType,
             limit: pageSize,
             offset: offset,
-            useFullTextSearch: true
+            useFullTextSearch: true,
+            excludedExtensions: EXCLUDED_EXTENSIONS // Send exclusion list to backend
         };
 
         console.log('--- INICIANDO BUSCA ---');

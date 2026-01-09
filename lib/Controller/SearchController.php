@@ -42,7 +42,9 @@ class SearchController extends Controller
             $fileType = isset($params['fileType']) ? $params['fileType'] : '';
             $limit = isset($params['limit']) ? max(1, min(10000, (int)$params['limit'])) : 100;
             $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
+            $offset = isset($params['offset']) ? max(0, (int)$params['offset']) : 0;
             $useFullTextSearch = isset($params['useFullTextSearch']) ? (bool)$params['useFullTextSearch'] : true; // MUDANÇA: Padrão true
+            $excludedExtensions = isset($params['excludedExtensions']) && is_array($params['excludedExtensions']) ? $params['excludedExtensions'] : [];
 
             // Validar tagOperator
             if (!in_array($tagOperator, ['AND', 'OR'])) {
@@ -63,7 +65,7 @@ class SearchController extends Controller
             // LÓGICA FORÇADA: Sempre usar FullTextSearch (integração direta)
             // Ignoramos se $fullTextAvailable é true ou false, pois estamos usando conexão direta
             
-            $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+            $results = $this->searchService->searchFilesWithFullText($filename, $tags, $tagOperator, $fileType, $limit, $offset, $excludedExtensions);
             $searchMethod = 'fulltext_forced';
 
             // Verificar se realmente usou FullTextSearch olhando o searchType dos resultados
@@ -90,6 +92,7 @@ class SearchController extends Controller
                     'requestedFullText' => $useFullTextSearch,
                     'hasFilename' => !empty($filename),
                     'hasTags' => !empty($tags),
+                    'excludedExtensions' => $excludedExtensions,
                     'executionTime' => $executionTime
                 ],
                 'debug' => $debug  // INFORMAÇÕES DE DEBUG

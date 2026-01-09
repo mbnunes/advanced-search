@@ -56,7 +56,7 @@ class SearchService
     }
 
     // MANTER SUA FUNÇÃO ORIGINAL searchFiles COM LÓGICA UNIVERSAL
-    public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0)
+    public function searchFiles($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0, $excludedExtensions = [])
     {
         $user = $this->userSession->getUser();
         if (!$user) {
@@ -188,6 +188,12 @@ class SearchService
             // Filtrar por tipo (se já não foi feito)
             if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
 
+            // Filtrar por extensões excluídas
+            if (!empty($excludedExtensions)) {
+                $ext = '.' . strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
+                if (in_array($ext, $excludedExtensions)) continue;
+            }
+
             // Paginação
             if ($skipped < $offset) {
                 $skipped++;
@@ -257,7 +263,7 @@ class SearchService
         }
     }
 
-    public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0) {
+    public function searchFilesWithFullText($filename = '', $tags = [], $tagOperator = 'AND', $fileType = '', $limit = 100, $offset = 0, $excludedExtensions = []) {
         $this->log("searchFilesWithFullText HYBRID START. Filename: '$filename'");
         
         try {
@@ -367,6 +373,13 @@ class SearchService
 
                         if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
                         
+                        // Filtrar por extensões excluídas
+                        if (!empty($excludedExtensions)) {
+                            // $ext já foi calculado acima (sem o ponto), adicionar ponto para verificar na lista que tem pontos
+                            // A lista vem do JS como ['.pdf', '.xls'], e o pathinfo retorna 'pdf'
+                            if (in_array('.' . $ext, $excludedExtensions)) continue;
+                        }
+                        
                         if ($skipped < $offset) {
                             $skipped++;
                             continue;
@@ -382,7 +395,7 @@ class SearchService
             } else {
                 // Fallback se não tem termo nem tag: buscar recentes ou por tipo
                 // (Reutilizando lógica do searchFiles)
-                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset, $excludedExtensions);
             }
 
             // Carregar tags
@@ -406,7 +419,7 @@ class SearchService
             $this->log($this->lastError);
             // Fallback seguro
             try {
-                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset);
+                return $this->searchFiles($filename, $tags, $tagOperator, $fileType, $limit, $offset, $excludedExtensions);
             } catch (\Throwable $e2) {
                 $this->log("Fallback failed: " . $e2->getMessage());
                 return [];
