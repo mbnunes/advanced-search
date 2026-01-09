@@ -405,23 +405,35 @@ class SearchService
                 foreach ($candidatesIds as $fileId) {
                     try {
                         $nodes = $userFolder->getById($fileId);
-                        if (empty($nodes)) continue;
+                        if (empty($nodes)) {
+                            // $this->log("DEBUG: File $fileId not found or not visible.");
+                            continue;
+                        }
                         $file = $nodes[0];
                         
-                        if ($file->getType() !== FileInfo::TYPE_FILE) continue;
+                        if ($file->getType() !== FileInfo::TYPE_FILE) {
+                            // $this->log("DEBUG: File $fileId is not a file.");
+                            continue;
+                        }
                         if (strpos($file->getName(), '.') === 0) continue;
                         
                         // Excluir arquivos de sistema (.pek, .cfa)
                         $ext = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
                         if (in_array($ext, ['pek', 'cfa'])) continue;
 
-                        if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) continue;
+                        if (!empty($fileType) && !$this->matchesFileType($file, $fileType)) {
+                            $this->log("DEBUG: File $fileId (" . $file->getName() . ") type mismatch.");
+                            continue;
+                        }
                         
                         // Filtrar por extensões excluídas
                         if (!empty($excludedExtensions)) {
                             // $ext já foi calculado acima (sem o ponto), adicionar ponto para verificar na lista que tem pontos
                             // A lista vem do JS como ['.pdf', '.xls'], e o pathinfo retorna 'pdf'
-                            if (in_array('.' . $ext, $excludedExtensions)) continue;
+                            if (in_array('.' . $ext, $excludedExtensions)) {
+                                $this->log("DEBUG: File $fileId (" . $file->getName() . ") excluded extension: .$ext");
+                                continue;
+                            }
                         }
                         
                         if ($skipped < $offset) {
@@ -434,7 +446,10 @@ class SearchService
                         
                         if ($count >= $limit) break;
                         
-                    } catch (\Exception $e) { continue; }
+                    } catch (\Exception $e) {
+                         $this->log("DEBUG: Exception for file $fileId: " . $e->getMessage());
+                         continue; 
+                    }
                 }
             } else {
                 // Fallback se não tem termo nem tag: buscar recentes ou por tipo
