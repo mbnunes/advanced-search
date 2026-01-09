@@ -25,7 +25,7 @@ class SearchController extends Controller
     public function search()
     {
         try {
-            // Pegar dados do corpo da requisição POST
+            $debug = true; // FORCE DEBUG
             $params = $this->request->getParams();
             
             // LOG DE DEBUG

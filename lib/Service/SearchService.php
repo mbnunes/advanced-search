@@ -327,24 +327,26 @@ class SearchService
 
             // Combinar Universal com Explícito
             $candidatesIds = null;
-            // Combinar Universal com Explícito
-            $candidatesIds = null;
             if ($finalFileIds !== null && $explicitTagIds !== null) {
                 if ($tagOperator === 'OR') {
                     // União: (Universal) OR (Tags)
                     $candidatesIds = array_unique(array_merge($finalFileIds, $explicitTagIds));
+                    $this->log("DEBUG: Logic OR. Univ: " . count($finalFileIds) . " Tags: " . count($explicitTagIds) . " Merged: " . count($candidatesIds));
                 } else {
                     // Interseção: (Universal) AND (Tags)
                     $candidatesIds = array_intersect($finalFileIds, $explicitTagIds);
                 }
             } elseif ($finalFileIds !== null) {
                 $candidatesIds = $finalFileIds;
+                $this->log("DEBUG: Only Universal results: " . count($candidatesIds));
             } elseif ($explicitTagIds !== null) {
                 $candidatesIds = $explicitTagIds;
+                $this->log("DEBUG: Only Tag results: " . count($candidatesIds));
             }
 
             // Se candidatesIds for vazio array
             if ($candidatesIds !== null && empty($candidatesIds)) {
+                $this->log("DEBUG: Candidates empty after combination.");
                 return [];
             }
             
