@@ -240,10 +240,26 @@ class SearchService
             $allTags = $this->systemTagManager->getAllTags();
             $matchingTagIds = [];
             
-            // Busca case-insensitive parcial nas tags
+            // Busca case-insensitive parcial nas tags (e fuzzy)
             foreach ($allTags as $tag) {
-                if (stripos($tag->getName(), $token) !== false) {
+                $tagName = $tag->getName();
+                
+                // 1. Partial Match (Substring)
+                if (stripos($tagName, $token) !== false) {
                     $matchingTagIds[] = $tag->getId();
+                    continue;
+                }
+                
+                // 2. Fuzzy Match (Levenshtein)
+                // Usar apenas para tokens de tamanho razoável (> 3) para evitar matches ruins
+                if (strlen($token) > 3) {
+                    $distance = levenshtein(strtoupper($tagName), strtoupper($token));
+                    // Permitir 1 erro para palavras curtas (4-5), 2 para longas (>5)
+                    $limit = strlen($token) > 5 ? 2 : 1;
+                    if ($distance <= $limit) {
+                        $this->log("DEBUG: Fuzzy match for tag '$token' -> '$tagName' (Dist: $distance)");
+                        $matchingTagIds[] = $tag->getId();
+                    }
                 }
             }
 
@@ -471,7 +487,9 @@ class SearchService
                 'bool' => [
                     'should' => [
                         ['wildcard' => ['title' => ['value' => $wildcard, 'case_insensitive' => true]]],
-                        ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]]
+                        ['wildcard' => ['content' => ['value' => $wildcard, 'case_insensitive' => true]]],
+                        ['fuzzy' => ['title' => ['value' => $term, 'fuzziness' => 'AUTO']]],
+                        ['fuzzy' => ['content' => ['value' => $term, 'fuzziness' => 'AUTO']]]
                     ],
                     'minimum_should_match' => 1
                 ]
