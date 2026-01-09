@@ -20,6 +20,7 @@ class SearchService
     private $fullTextSearchManager;
     private $appManager;
     private $lastError = '';
+    private $internalLogs = [];
 
     public function __construct(
         IRootFolder $rootFolder,
@@ -39,12 +40,17 @@ class SearchService
     }
 
     private function log($message) {
+        $this->internalLogs[] = $message; // Store for frontend
         try {
             \OC::$server->getLogger()->error("[AdvancedSearch] $message", ['app' => 'advanced_search']);
         } catch (\Throwable $e) {
             // Fallback
             error_log("[AdvancedSearch] $message");
         }
+    }
+    
+    public function getLogs() {
+        return $this->internalLogs;
     }
 
     private function checkFulltextSearchAvailable()

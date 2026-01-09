@@ -95,7 +95,10 @@ class SearchController extends Controller
                     'excludedExtensions' => $excludedExtensions,
                     'executionTime' => $executionTime
                 ],
-                'debug' => $debug  // INFORMAÇÕES DE DEBUG
+                'debug' => [
+                    'active' => $debug,
+                    'logs' => $this->searchService->getLogs()
+                ]
             ]);
         } catch (\Exception $e) {
             return new JSONResponse([
