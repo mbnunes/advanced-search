@@ -223,6 +223,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         };
 
+        // DEBUG: Check if we have tags
+        console.log('DEBUG: availableTags length:', availableTags ? availableTags.length : 0);
+        if (availableTags) {
+             const debugFound = availableTags.find(t => t.includes('BASQUETE'));
+             if (debugFound) console.log('DEBUG: Found specific tag in list:', debugFound);
+        }
+
         // 1. First, check for known tags from availableTags (longest first)
         if (availableTags && availableTags.length > 0) {
             // Sort tags by length (descending) so "BASQUETE MASCULINO" is matched before "BASQUETE"
@@ -239,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 // If tag is found
                 if (pattern.test(cleanFilename)) {
+                    console.log('DEBUG: Smart logic matched:', tag);
                     parsedTags.push(tag); // Use the correct casing from the list
                     // Remove from filename
                     cleanFilename = cleanFilename.replace(pattern, ' ');
