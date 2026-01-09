@@ -203,19 +203,45 @@ document.addEventListener('DOMContentLoaded', function () {
         const fileType = document.getElementById('file-type').value;
 
         // Parse tags from filename input (e.g. "Name #tag1 #tag2" or Name #"Tag With Space")
+        // SMART PARSING: Check availableTags to find unquoted tags with spaces (e.g. #BASQUETE MASCULINO)
         let parsedTags = [];
+        let cleanFilename = filenameInput;
+
+        // Helper to escape regex special characters
+        const escapeRegExp = (string) => {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        };
+
+        // 1. First, check for known tags from availableTags (longest first)
+        if (availableTags && availableTags.length > 0) {
+            // Sort tags by length (descending) so "BASQUETE MASCULINO" is matched before "BASQUETE"
+            const sortedTags = [...availableTags].sort((a, b) => b.length - a.length);
+
+            for (const tag of sortedTags) {
+                if (!tag) continue;
+                // Look for #TagName (case insensitive)
+                // We use space or end of string as boundary to avoid partial words if we wanted strictness,
+                // but for now let's mimic the flexible behavior. 
+                // However, matching "#Tag" inside "#TagLonger" is solved by the sort order.
+                
+                const pattern = new RegExp('#' + escapeRegExp(tag), 'gi');
+                
+                // If tag is found
+                if (pattern.test(cleanFilename)) {
+                    parsedTags.push(tag); // Use the correct casing from the list
+                    // Remove from filename
+                    cleanFilename = cleanFilename.replace(pattern, ' ');
+                }
+            }
+        }
         
-        // Regex to find #tags
+        // 2. Fallback: Regex to find remaining #tags (quoted or simple)
         // Group 1: Quoted tag content (e.g. "Tag Name")
         // Group 2: Simple tag content (e.g. TagName)
         const tagRegex = /#"([^"]+)"|#([\w\u00C0-\u00FF-]+)/g;
         let match;
-        
-        // We need to reconstruct the clean filename by removing matches
-        // Using replace with callback is safer to handle the exact matches found
-        let cleanFilename = filenameInput;
 
-        while ((match = tagRegex.exec(filenameInput)) !== null) {
+        while ((match = tagRegex.exec(cleanFilename)) !== null) {
             // match[1] is the quoted content, match[2] is the simple content
             const tag = match[1] || match[2];
             if (tag) {
@@ -224,8 +250,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // Remove tags from filename to get the clean search term
-        cleanFilename = filenameInput.replace(tagRegex, '').trim();
-        // Remove extra spaces left by removal
+        cleanFilename = cleanFilename.replace(tagRegex, '').trim();
+        // Remove extra spaces
         cleanFilename = cleanFilename.replace(/\s+/g, ' ');
 
         // Combine with hidden tags input if any
