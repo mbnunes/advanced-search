@@ -327,8 +327,16 @@ class SearchService
 
             // Combinar Universal com Explícito
             $candidatesIds = null;
+            // Combinar Universal com Explícito
+            $candidatesIds = null;
             if ($finalFileIds !== null && $explicitTagIds !== null) {
-                $candidatesIds = array_intersect($finalFileIds, $explicitTagIds);
+                if ($tagOperator === 'OR') {
+                    // União: (Universal) OR (Tags)
+                    $candidatesIds = array_unique(array_merge($finalFileIds, $explicitTagIds));
+                } else {
+                    // Interseção: (Universal) AND (Tags)
+                    $candidatesIds = array_intersect($finalFileIds, $explicitTagIds);
+                }
             } elseif ($finalFileIds !== null) {
                 $candidatesIds = $finalFileIds;
             } elseif ($explicitTagIds !== null) {
