@@ -298,11 +298,14 @@ class SearchService
                 }
 
                 foreach ($tokens as $token) {
+                    $this->log("DEBUG: Processing token: '$token'");
                     // a. ES (Title/Content)
                     $esIds = $this->getIdsFromElasticsearch($token);
+                    $this->log("DEBUG: ES IDs for '$token': " . count($esIds));
                     
                     // b. MySQL (Tags)
                     $dbIds = $this->getFileIdsByTagToken($token);
+                    $this->log("DEBUG: DB IDs for '$token': " . count($dbIds));
                     
                     // c. União
                     $tokenIds = array_unique(array_merge($esIds, $dbIds));
@@ -313,8 +316,10 @@ class SearchService
                     } else {
                         $finalFileIds = array_intersect($finalFileIds, $tokenIds);
                     }
+                    $this->log("DEBUG: Final IDs after token '$token': " . count($finalFileIds));
                     
                     if (empty($finalFileIds)) {
+                        $this->log("DEBUG: No IDs remaining after token '$token'. Breaking.");
                         break;
                     }
                 }
@@ -475,6 +480,9 @@ class SearchService
                 ]
             ]
         ];
+
+        $payload = json_encode($query);
+        $this->log("DEBUG: ES Query for '$token': " . $payload);
 
         $payload = json_encode($query);
         
