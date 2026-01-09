@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
         '.txt',
         '.xlsx',
         '.doc',
-        '.docx'
+        '.docx',
+        '.cr2'
     ];
     // ---------------------
 
