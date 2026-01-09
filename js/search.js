@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cleanFilename = cleanFilename.replace(/\s+/g, ' ');
 
         // 2. Tag Expansion (Combinatorial)
-        if (cleanFilename && availableTags && availableTags.length > 0) {
+        if (cleanFilename) {
             const tokens = cleanFilename.split(/\s+/).filter(t => t.length > 0);
             
             // Generate all non-empty combinations (Power Set)
@@ -266,39 +266,17 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             generateCombinations('', tokens);
             
-            // Check availability and uniqueness
+            // Deduplicate and push ALL combinations as potential tags
             const distinctCombinations = [...new Set(combinations)];
-            const expandedTags = [];
-            
-            distinctCombinations.forEach(combo => {
-                // Find case-insensitive match in availableTags
-                const match = availableTags.find(t => t.toLowerCase() === combo.toLowerCase());
-                if (match) {
-                     expandedTags.push(match);
-                }
-            });
+            const expandedTags = distinctCombinations;
             
             if (expandedTags.length > 0) {
-                console.log('DEBUG: Expanded Tags:', expandedTags);
+                console.log('DEBUG: Expanded Tags (Unconditional):', expandedTags);
                 // Add to parsedTags
                 parsedTags = [...parsedTags, ...expandedTags];
                 
-                // CRITICAL: If we added expanded tags, force 'OR' usage?
-                // If we use AND, "BASQUETE MASCULINO" (Filename) + Tags["BASQUETE", "MASCULINO"] 
-                // requires file to have ALL those tags. 
-                // If user wants to find files with ANY of those tags (+ filename match), OR is better.
-                // However, they also sent tagOperator: "AND" in their request example...
-                
-                // Let's deduce: If they have overlapping tags (BASQUETE and BASQUETE MASCULINO),
-                // a file usually won't have both. So AND will fail.
-                // Switching to OR automatically is safer for "Possibility Search".
-                
-                // Only switch if user hasn't explicitly set OR (which they can't easily on frontend right now) based on logic
-                // But let's assume if expandedTags > 0, we imply "Try these tags".
-                
-                // IMPORTANT: If we have Explicit Tags (#), they should be AND? Or OR?
-                // Mixed mode is hard. Let's set tagOperator to OR if we have ANY expanded tags.
-                // This means (Universal Filename Search) AND (Has at least one of the tags).
+                // CRITICAL: If we added expanded tags, force 'OR' usage matches logic
+                // This means (Universal Filename Search) OR (Has at least one of the tags).
                 tagOperator = 'OR';
             }
         }
