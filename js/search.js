@@ -721,9 +721,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const isImage = file.mimetype?.startsWith('image/');
                 const isVideo = file.mimetype?.startsWith('video/');
                 const isAudio = file.mimetype?.startsWith('audio/') || file.name.toLowerCase().endsWith('.cfa');
+                const isPdf = file.mimetype === 'application/pdf';
                 
-                // Imagens e Vídeos tentam carregar thumbnail
-                const hasThumbnail = isImage || isVideo;
+                // Imagens, Vídeos e PDFs tentam carregar thumbnail
+                const hasThumbnail = isImage || isVideo || isPdf;
 
                 const fileCard = document.createElement('div');
                 fileCard.className = 'file-card';
@@ -805,8 +806,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         this.style.display = 'none';
                         
                         // Se for imagem e falhar, mostra ícone. Se for vídeo e falhar, o ícone de play (adicionado abaixo) já serve, mas precisamos de um fundo ou ícone de arquivo atrás.
-                        if (isImage) {
+                        // Se for imagem e falhar, mostra ícone. Se for vídeo e falhar, o ícone de play (adicionado abaixo) já serve, mas precisamos de um fundo ou ícone de arquivo atrás.
+                        if (isImage || isPdf) {
                             const fileIcon = document.createElement('div');
+                            // Para PDF, se falhar o thumbnail, usa ícone genérico
+                            const iconClass = isPdf ? 'icon-filetype-pdf' : getFileIcon(file.name); // Tentar usar classe específica se disponível no CSS do NC, senão o helper mapeia
+                            
+                            // Se getFileIcon retornar algo genérico para PDF, podemos forçar imagem se quisermos ou deixar texto
+                            // Vamos usar o helper corrigido que será injetado abaixo
+                            
                             fileIcon.className = `file-icon ${getFileIcon(file.name)}`;
                             fileIcon.style.fontSize = '48px';
                             // Limpar conteúdo anterior (img oculta) para centralizar ícone
@@ -1044,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const isImage = file.mimetype.startsWith('image/');
         const isVideo = file.mimetype.startsWith('video/');
+        const isPdf = file.mimetype === 'application/pdf';
 
         if (isVideo) {
             console.log('É vídeo. Tentando reproduzir com modal.');
@@ -1051,8 +1060,8 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (isImage) {
-            console.log('É imagem. Tentando abrir Viewer.');
+        if (isImage || isPdf) {
+            console.log('É imagem ou PDF. Tentando abrir Viewer.');
             // Abrir com Viewer nativo
             if (window.OCA && window.OCA.Viewer) {
                 console.log('OCA.Viewer disponível');
@@ -1179,6 +1188,61 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#emptycontent p').textContent = 'Use os filtros ao lado para buscar seus arquivos';
 
     setupTagAutocomplete();
+
+    // Helper function to get file icon class based on extension
+    function getFileIcon(filename) {
+        if (!filename) return 'icon-file';
+        var extension = filename.split('.').pop().toLowerCase();
+        
+        switch (extension) {
+            case 'pdf':
+                return 'icon-filetype-image'; // Or icon-file-pdf if available, but image usually triggers viewer
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+            case 'gif':
+            case 'webp':
+            case 'svg':
+            case 'bmp':
+                return 'icon-filetype-image';
+            case 'mp4':
+            case 'mkv':
+            case 'avi':
+            case 'mov':
+            case 'webm':
+                return 'icon-filetype-video';
+            case 'mp3':
+            case 'wav':
+            case 'flac':
+            case 'ogg':
+            case 'm4a':
+            case 'acc':
+                return 'icon-filetype-audio';
+            case 'txt':
+            case 'md':
+                return 'icon-filetype-text';
+            case 'doc':
+            case 'docx':
+            case 'odt':
+                return 'icon-filetype-document';
+            case 'xls':
+            case 'xlsx':
+            case 'ods':
+                return 'icon-filetype-spreadsheet';
+            case 'ppt':
+            case 'pptx':
+            case 'odp':
+                return 'icon-filetype-presentation';
+            case 'zip':
+            case 'rar':
+            case 'tar':
+            case 'gz':
+            case '7z':
+                return 'icon-filetype-archive';
+            default:
+                return 'icon-file';
+        }
+    }
 });
 
 function setupTagAutocomplete() {
