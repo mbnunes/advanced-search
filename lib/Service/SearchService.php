@@ -635,11 +635,35 @@ class SearchService
     {
         try {
             $allTags = $this->systemTagManager->getAllTags();
+            $bestMatchId = null;
+            $shortestDistance = 999;
+            
             foreach ($allTags as $tag) {
-                if ($tag->getName() === $tagName) {
+                $checkName = $tag->getName();
+                
+                // 1. Exact Match
+                if ($checkName === $tagName) {
                     return $tag->getId();
                 }
+                
+                // 2. Fuzzy Check
+                // Só aplicar se não achou exato ainda
+                if (strlen($tagName) > 3) {
+                    $distance = levenshtein(strtoupper($checkName), strtoupper($tagName));
+                    $limit = strlen($tagName) > 5 ? 2 : 1;
+                    
+                    if ($distance <= $limit && $distance < $shortestDistance) {
+                        $shortestDistance = $distance;
+                        $bestMatchId = $tag->getId();
+                    }
+                }
             }
+            
+            if ($bestMatchId !== null) {
+                $this->log("DEBUG: getTagIdByName Fuzzy Match: '$tagName' -> ID $bestMatchId (Dist: $shortestDistance)");
+                return $bestMatchId;
+            }
+
         } catch (\Throwable $e) {
             return null;
         }
