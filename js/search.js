@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', function () {
         '.xls',
         '.pdf',
         '.txt',
-        '.xlsx'
+        '.xlsx',
+        '.doc',
+        '.docx'
     ];
     // ---------------------
 
@@ -214,65 +216,93 @@ document.addEventListener('DOMContentLoaded', function () {
         const fileType = document.getElementById('file-type').value;
 
         // Parse tags from filename input (e.g. "Name #tag1 #tag2" or Name #"Tag With Space")
-        // SMART PARSING: Check availableTags to find unquoted tags with spaces (e.g. #BASQUETE MASCULINO)
-        let parsedTags = [];
-        let cleanFilename = filenameInput;
+        // STRATEGY: 
+        // 1. Extract explicit #tags (remove from filename)
+        // 2. For the remaining filename, generate ALL possible combinations of words
+        // 3. Check if any combination exists in availableTags
+        // 4. Add matches to parsedTags (but Keep filename!)
 
+        let parsedTags = [];
+        let explicitTags = [];
+        
         // Helper to escape regex special characters
         const escapeRegExp = (string) => {
             return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         };
 
-        // DEBUG: Check if we have tags
-        console.log('DEBUG: availableTags length:', availableTags ? availableTags.length : 0);
-        if (availableTags) {
-             const debugFound = availableTags.find(t => t.includes('BASQUETE'));
-             if (debugFound) console.log('DEBUG: Found specific tag in list:', debugFound);
-        }
-
-        // 1. First, check for known tags from availableTags (longest first)
-        if (availableTags && availableTags.length > 0) {
-            // Sort tags by length (descending) so "BASQUETE MASCULINO" is matched before "BASQUETE"
-            const sortedTags = [...availableTags].sort((a, b) => b.length - a.length);
-
-            for (const tag of sortedTags) {
-                if (!tag) continue;
-                // Look for #TagName (case insensitive)
-                // We use space or end of string as boundary to avoid partial words if we wanted strictness,
-                // but for now let's mimic the flexible behavior. 
-                // However, matching "#Tag" inside "#TagLonger" is solved by the sort order.
-                
-                const pattern = new RegExp('#' + escapeRegExp(tag), 'gi');
-                
-                // If tag is found
-                if (pattern.test(cleanFilename)) {
-                    console.log('DEBUG: Smart logic matched:', tag);
-                    parsedTags.push(tag); // Use the correct casing from the list
-                    // Remove from filename
-                    cleanFilename = cleanFilename.replace(pattern, ' ');
-                }
-            }
-        }
-        
-        // 2. Fallback: Regex to find remaining #tags (quoted or simple)
-        // Group 1: Quoted tag content (e.g. "Tag Name")
-        // Group 2: Simple tag content (e.g. TagName)
+        // 1. Extract Explicit #tags
         const tagRegex = /#"([^"]+)"|#([\w\u00C0-\u00FF-]+)/g;
         let match;
+        // We need to reconstruct the clean filename by removing matches
+        let cleanFilename = filenameInput;
 
         while ((match = tagRegex.exec(cleanFilename)) !== null) {
-            // match[1] is the quoted content, match[2] is the simple content
             const tag = match[1] || match[2];
             if (tag) {
                 parsedTags.push(tag);
+                explicitTags.push(tag);
             }
         }
         
-        // Remove tags from filename to get the clean search term
+        // Remove explicit tags from filename
         cleanFilename = cleanFilename.replace(tagRegex, '').trim();
-        // Remove extra spaces
         cleanFilename = cleanFilename.replace(/\s+/g, ' ');
 
+        // 2. Tag Expansion (Combinatorial)
+        if (cleanFilename && availableTags && availableTags.length > 0) {
+            const tokens = cleanFilename.split(/\s+/).filter(t => t.length > 0);
+            
+            // Generate all non-empty combinations (Power Set)
+            const combinations = [];
+            const generateCombinations = (prefix, remainingTokens) => {
+                for (let i = 0; i < remainingTokens.length; i++) {
+                     const newToken = remainingTokens[i];
+                     const newCombination = prefix ? prefix + ' ' + newToken : newToken;
+                     combinations.push(newCombination);
+                     
+                     // Recurse with remaining tokens (to support non-adjacent like "BASQUETE SIDNEY")
+                     generateCombinations(newCombination, remainingTokens.slice(i + 1));
+                }
+            };
+            generateCombinations('', tokens);
+            
+            // Check availability and uniqueness
+            const distinctCombinations = [...new Set(combinations)];
+            const expandedTags = [];
+            
+            distinctCombinations.forEach(combo => {
+                // Find case-insensitive match in availableTags
+                const match = availableTags.find(t => t.toLowerCase() === combo.toLowerCase());
+                if (match) {
+                     expandedTags.push(match);
+                }
+            });
+            
+            if (expandedTags.length > 0) {
+                console.log('DEBUG: Expanded Tags:', expandedTags);
+                // Add to parsedTags
+                parsedTags = [...parsedTags, ...expandedTags];
+                
+                // CRITICAL: If we added expanded tags, force 'OR' usage?
+                // If we use AND, "BASQUETE MASCULINO" (Filename) + Tags["BASQUETE", "MASCULINO"] 
+                // requires file to have ALL those tags. 
+                // If user wants to find files with ANY of those tags (+ filename match), OR is better.
+                // However, they also sent tagOperator: "AND" in their request example...
+                
+                // Let's deduce: If they have overlapping tags (BASQUETE and BASQUETE MASCULINO),
+                // a file usually won't have both. So AND will fail.
+                // Switching to OR automatically is safer for "Possibility Search".
+                
+                // Only switch if user hasn't explicitly set OR (which they can't easily on frontend right now) based on logic
+                // But let's assume if expandedTags > 0, we imply "Try these tags".
+                
+                // IMPORTANT: If we have Explicit Tags (#), they should be AND? Or OR?
+                // Mixed mode is hard. Let's set tagOperator to OR if we have ANY expanded tags.
+                // This means (Universal Filename Search) AND (Has at least one of the tags).
+                tagOperator = 'OR';
+            }
+        }
+        
         // Combine with hidden tags input if any
         const hiddenTags = hiddenTagsInput ? hiddenTagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
         const finalTags = [...new Set([...parsedTags, ...hiddenTags])]; // Unique tags
