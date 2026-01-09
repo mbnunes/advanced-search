@@ -41,6 +41,13 @@ class SearchService
 
     private function log($message) {
         $this->internalLogs[] = $message; // Store for frontend
+        
+        // Log to specific file as requested
+        $logFile = '/var/log/advancedsearch.log';
+        $timestamp = date('Y-m-d H:i:s');
+        // Silence errors if file is not writable to avoid crashing the search
+        @file_put_contents($logFile, "[$timestamp] $message\n", FILE_APPEND);
+
         try {
             \OC::$server->getLogger()->error("[AdvancedSearch] $message", ['app' => 'advanced_search']);
         } catch (\Throwable $e) {
