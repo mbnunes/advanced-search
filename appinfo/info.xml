@@ -5,7 +5,7 @@
     <name>Search</name>
     <summary>Advanced file search with tags and logical operators</summary>
     <description>Search files by name and multiple tags using AND/OR operators</description>
-    <version>1.0.52</version>
+    <version>1.0.53</version>
     <licence>bsd</licence>
     <author>Mauricio Nunes</author>
     <namespace>AdvancedSearch</namespace>

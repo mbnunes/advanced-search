@@ -355,10 +355,16 @@ class SearchService
             if (!empty($tags)) {
                 $explicitTagIds = $this->getFileIdsByTags($tags, $tagOperator);
                 $this->log("DEBUG: Explicit tag IDs count: " . count($explicitTagIds));
+                
+                // CRITICAL FIX: Do NOT return empty immediately if tags are not found.
+                // If operator is OR, we still want the Universal Search results.
+                // If operator is AND, the intersection later will handle it (intersect with empty = empty).
+                /*
                 if (empty($explicitTagIds)) {
                     $this->log("DEBUG: Explicit tags returned empty. Returning [].");
                     return [];
                 }
+                */
             }
 
             // Combinar Universal com Explícito
